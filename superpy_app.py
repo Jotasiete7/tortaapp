@@ -316,9 +316,28 @@ class SuperPyGUI(ctk.CTk):
         self.search_entry.pack(side='left', padx=6)
         tk.Button(top, text='Buscar', command=self.on_search, font=FONT).pack(side='left', padx=6)
 
-        # results
-        self.search_results = ScrolledText(f, height=28, font=("Consolas", 10))
-        self.search_results.pack(fill='both', expand=True, padx=8, pady=6)
+        # results (Treeview)
+        tree_frame = tk.Frame(f, bg=BG)
+        tree_frame.pack(fill='both', expand=True, padx=8, pady=6)
+        
+        cols = ('Date', 'Player', 'Op', 'Item', 'Qty', 'Price')
+        self.search_tree = ttk.Treeview(tree_frame, columns=cols, show='headings')
+        
+        for col in cols:
+            self.search_tree.heading(col, text=col)
+            
+        self.search_tree.column('Date', width=120)
+        self.search_tree.column('Player', width=100)
+        self.search_tree.column('Op', width=50)
+        self.search_tree.column('Item', width=300)
+        self.search_tree.column('Qty', width=50)
+        self.search_tree.column('Price', width=80)
+
+        vsb = ttk.Scrollbar(tree_frame, orient="vertical", command=self.search_tree.yview)
+        self.search_tree.configure(yscrollcommand=vsb.set)
+        
+        self.search_tree.pack(side='left', fill='both', expand=True)
+        vsb.pack(side='right', fill='y')
 
     def _build_advanced_frame(self):
         f = self.frames['advanced']
@@ -341,8 +360,28 @@ class SuperPyGUI(ctk.CTk):
 
         tk.Button(pnl, text='Buscar Avançado', command=self.on_advanced_search, font=FONT).grid(row=3, column=0, columnspan=2, pady=8)
 
-        self.adv_results = ScrolledText(f, height=22, font=("Consolas", 10))
-        self.adv_results.pack(fill='both', expand=True, padx=8, pady=6)
+        # results (Treeview)
+        tree_frame = tk.Frame(f, bg=BG)
+        tree_frame.pack(fill='both', expand=True, padx=8, pady=6)
+        
+        cols = ('Date', 'Player', 'Op', 'Item', 'Qty', 'Price')
+        self.adv_tree = ttk.Treeview(tree_frame, columns=cols, show='headings')
+        
+        for col in cols:
+            self.adv_tree.heading(col, text=col)
+            
+        self.adv_tree.column('Date', width=120)
+        self.adv_tree.column('Player', width=100)
+        self.adv_tree.column('Op', width=50)
+        self.adv_tree.column('Item', width=300)
+        self.adv_tree.column('Qty', width=50)
+        self.adv_tree.column('Price', width=80)
+
+        vsb = ttk.Scrollbar(tree_frame, orient="vertical", command=self.adv_tree.yview)
+        self.adv_tree.configure(yscrollcommand=vsb.set)
+        
+        self.adv_tree.pack(side='left', fill='both', expand=True)
+        vsb.pack(side='right', fill='y')
 
     def _build_stats_frame(self):
         f = self.frames['stats']
@@ -669,10 +708,6 @@ Criado por: Jotasiete7 | Versão: 2.0
         self._hide_all_frames()
         self.frames['charts'].pack(fill='both', expand=True)
 
-    def show_insights(self):
-        self._hide_all_frames()
-        self.frames['insights'].pack(fill='both', expand=True)
-
     def show_plugins(self):
         self._hide_all_frames()
         self.frames['plugins'].pack(fill='both', expand=True)
@@ -753,15 +788,24 @@ Criado por: Jotasiete7 | Versão: 2.0
 
         dt = time.time() - t0
         
-        self.search_results.delete('1.0', tk.END)
-        self.search_results.insert(tk.END, f'Resultados: {len(res)} (took {dt:.3f}s)\n\n')
+        # Clear tree
+        for i in self.search_tree.get_children():
+            self.search_tree.delete(i)
+            
+        self.set_status(f'Resultados: {len(res)} (took {dt:.3f}s)')
+        
         for r in res[:2000]:
-            # Format dict as readable string
-            if isinstance(r, dict):
-                formatted = ', '.join([f"{k}: {v}" for k, v in r.items() if v is not None])
-                self.search_results.insert(tk.END, formatted + '\n')
-            else:
-                self.search_results.insert(tk.END, str(r) + '\n')
+            # Map dict keys to columns
+            # Keys might be: 'date', 'player', 'operation', 'main_item', 'main_qty', 'price_s'
+            vals = (
+                r.get('date', r.get('timestamp', '-')),
+                r.get('player', '-'),
+                r.get('operation', '-'),
+                r.get('main_item', '-'),
+                r.get('main_qty', '-'),
+                r.get('price_s', '-')
+            )
+            self.search_tree.insert('', 'end', values=vals)
 
     def on_advanced_search(self):
         must = self.adv_must.get()
@@ -777,17 +821,26 @@ Criado por: Jotasiete7 | Versão: 2.0
             df = df[mask]
         
         res = df.head(5000).to_dict('records')
+        res = df.head(5000).to_dict('records')
         dt = time.time() - t0
         
-        self.adv_results.delete('1.0', tk.END)
-        self.adv_results.insert(tk.END, f'Resultados: {len(res)} (took {dt:.3f}s)\n\n')
+        # Clear tree
+        for i in self.adv_tree.get_children():
+            self.adv_tree.delete(i)
+            
+        self.set_status(f'Resultados: {len(res)} (took {dt:.3f}s)')
+        
         for r in res:
-            # Format dict as readable string
-            if isinstance(r, dict):
-                formatted = ', '.join([f"{k}: {v}" for k, v in r.items() if v is not None])
-                self.adv_results.insert(tk.END, formatted + '\n')
-            else:
-                self.adv_results.insert(tk.END, str(r) + '\n')
+             # Map dict keys to columns
+            vals = (
+                r.get('date', r.get('timestamp', '-')),
+                r.get('player', '-'),
+                r.get('operation', '-'),
+                r.get('main_item', '-'),
+                r.get('main_qty', '-'),
+                r.get('price_s', '-')
+            )
+            self.adv_tree.insert('', 'end', values=vals)
 
     def on_generate_chart(self):
         item = self.chart_item.get().strip()
@@ -818,7 +871,9 @@ Criado por: Jotasiete7 | Versão: 2.0
                 
                 # Group by date and get mean price
                 if 'date' in df.columns and 'price_s' in df.columns:
-                    daily = df.groupby('date')['price_s'].mean()
+                    # Reset index to avoid ambiguity if date is both index and column
+                    df_chart = df.reset_index(drop=True)
+                    daily = df_chart.groupby('date')['price_s'].mean()
                     ax.plot(daily.index, daily.values, marker='o', linestyle='-')
                     ax.set_title(f'Histórico de Preço Médio: {item}')
                     ax.set_xlabel('Data')
@@ -837,7 +892,9 @@ Criado por: Jotasiete7 | Versão: 2.0
                     title = 'Volume Global de Trades'
                 
                 if 'date' in df.columns:
-                    daily_vol = df.groupby('date').size()
+                    # Reset index to avoid ambiguity
+                    df_chart = df.reset_index(drop=True)
+                    daily_vol = df_chart.groupby('date').size()
                     ax.bar(daily_vol.index, daily_vol.values, color='skyblue')
                     ax.set_title(title)
                     ax.set_xlabel('Data')
