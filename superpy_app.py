@@ -496,10 +496,20 @@ class SuperPyGUI(ctk.CTk):
         top.pack(fill='x', pady=8, padx=8)
         
         tk.Label(top, text='Insights Preditivos (ML)', bg=BG, font=("Segoe UI", 14, "bold")).pack(side='left')
-        tk.Button(top, text='Gerar Insights', command=self.on_generate_insights, font=FONT, bg=ACCENT, fg='white').pack(side='right', padx=8)
+        
+        # Analysis type selector
+        tk.Label(top, text='Tipo:', bg=BG, font=FONT).pack(side='left', padx=(20, 5))
+        self.analysis_type = tk.StringVar(value="all")
+        analysis_menu = ttk.Combobox(top, textvariable=self.analysis_type, 
+                                     values=["all", "arbitrage", "relevance", "trends"],
+                                     state='readonly', width=12, font=FONT)
+        analysis_menu.pack(side='left', padx=5)
+        
+        tk.Button(top, text='Gerar Insights', command=self.on_generate_insights, 
+                 font=FONT, bg=ACCENT, fg='white').pack(side='right', padx=8)
 
         # Description
-        desc = tk.Label(f, text='O sistema analisará os dados carregados em busca de anomalias de preço e oportunidades de mercado.', 
+        desc = tk.Label(f, text='Análise avançada: Arbitragem (WTS vs WTB), Relevância (scoring contextual), Tendências (ALTA/BAIXA/ESTÁVEL).', 
                         bg=BG, fg='#aaaaaa', font=("Segoe UI", 9))
         desc.pack(fill='x', padx=8, pady=(0, 8))
 
@@ -512,12 +522,12 @@ class SuperPyGUI(ctk.CTk):
         self.insights_tree.heading('Preço', text='Preço')
         self.insights_tree.heading('Tipo', text='Tipo')
         self.insights_tree.heading('Detalhe', text='Detalhe')
-        self.insights_tree.heading('Score', text='Score (Z)')
+        self.insights_tree.heading('Score', text='Score')
         
         self.insights_tree.column('Item', width=150)
-        self.insights_tree.column('Preço', width=80)
+        self.insights_tree.column('Preço', width=120)
         self.insights_tree.column('Tipo', width=120)
-        self.insights_tree.column('Detalhe', width=300)
+        self.insights_tree.column('Detalhe', width=350)
         self.insights_tree.column('Score', width=60)
         
         vsb = ttk.Scrollbar(tree_frame, orient="vertical", command=self.insights_tree.yview)
@@ -530,8 +540,10 @@ class SuperPyGUI(ctk.CTk):
         if not self.engine:
             messagebox.showerror('Erro', 'Dados não carregados.')
             return
-            
-        self.log_message('Iniciando análise preditiva (ML)...')
+        
+        analysis_type = self.analysis_type.get() if hasattr(self, 'analysis_type') else 'all'
+        
+        self.log_message(f'Iniciando análise preditiva ({analysis_type})...')
         self.set_status("Processando ML...")
         
         # Clear tree
@@ -540,7 +552,7 @@ class SuperPyGUI(ctk.CTk):
             
         # Async execution
         def run_ml():
-            return self.ml_predictor.run_prediction(self.engine.df)
+            return self.ml_predictor.run_prediction(self.engine.df, analysis_type=analysis_type)
             
         def on_success(results):
             self.log_message(f'Análise concluída. {len(results)} insights gerados.')
