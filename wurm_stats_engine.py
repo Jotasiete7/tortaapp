@@ -502,6 +502,60 @@ class WurmStatsEngine:
 
 # ==================== Exemplo de Uso ====================
 
+
+    def calculate_profit_margins(self, item_name: str) -> pd.DataFrame:
+        """
+        Calcula margens de lucro (WTS - WTB) para um item.
+        Vectorized implementation.
+        
+        Args:
+            item_name: Nome do item
+            
+        Returns:
+            DataFrame com margens por data
+        """
+        df_item = self.filter_by_item(item_name, exact=False)
+        
+        if 'operation' not in df_item.columns or 'price_s' not in df_item.columns or 'date' not in df_item.columns:
+            return pd.DataFrame()
+            
+        # Separate WTS and WTB
+        wts = df_item[df_item['operation'] == 'WTS'].groupby('date')['price_s'].min()
+        wtb = df_item[df_item['operation'] == 'WTB'].groupby('date')['price_s'].max()
+        
+        # Merge and calculate spread
+        margins = pd.DataFrame({'min_wts': wts, 'max_wtb': wtb})
+        margins['spread'] = margins['min_wts'] - margins['max_wtb']
+        margins['margin_pct'] = (margins['spread'] / margins['max_wtb']) * 100
+        
+        return margins.dropna().sort_index()
+
+    def calculate_risk_trends(self, item_name: str, window: int = 7) -> pd.DataFrame:
+        """
+        Calcula tendências de risco (Volatilidade + Média Móvel).
+        Vectorized implementation.
+        
+        Args:
+            item_name: Nome do item
+            window: Janela de dias
+            
+        Returns:
+            DataFrame com métricas de risco
+        """
+        # Reuse existing methods but ensure they return compatible DataFrames
+        vol = self.calculate_volatility(item_name, window)
+        ma = self.calculate_mean_average(item_name, window)
+        
+        if vol.empty or ma.empty:
+            return pd.DataFrame()
+            
+        # Merge on date
+        risk = pd.merge(vol[['date', 'volatility']], ma[['date', 'moving_average']], on='date', how='inner')
+        risk['risk_score'] = risk['volatility'] / risk['moving_average']
+        
+        return risk.set_index('date').sort_index()
+
+
 if __name__ == "__main__":
     print("=" * 70)
     print("Wurm Online Trade Analyzer - Statistics Engine")

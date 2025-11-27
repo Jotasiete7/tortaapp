@@ -597,16 +597,18 @@ Criado por: Jotasiete7 | Versão: 2.0
 
     # ------------------ actions ------------------
     def _background_load(self):
-        """Attempt to extract and load data in background thread."""
-        def job():
-            self.log_message('Carregando dados...')
-            path = self.cfg_path.get() if hasattr(self, 'cfg_path') else TRADE_ZIP_PATH
+        """Attempt to extract and load data in background thread using AsyncDataLoader."""
+        self.log_message('Iniciando carregamento de dados (Async)...')
+        
+        path = self.cfg_path.get() if hasattr(self, 'cfg_path') else TRADE_ZIP_PATH
+        
+        # Define the heavy lifting function
+        def load_job():
             extracted = ensure_data_extracted(path, DEFAULT_DATA_DIR)
             if not extracted:
-                self.log_message('Nenhum dado encontrado. Configure o caminho na aba Configs.', is_error=True)
-                return
+                raise FileNotFoundError("Nenhum dado encontrado ou falha na extração.")
             
-            # Load data using WurmStatsEngine
+            # Determine target file
             data_path = path
             if os.path.isdir(extracted):
                  target_file = os.path.join(extracted, "wurm_trade_master_2025_clean.txt")
@@ -618,16 +620,32 @@ Criado por: Jotasiete7 | Versão: 2.0
                              data_path = os.path.join(extracted, f)
                              break
             
-            try:
-                self.engine = WurmStatsEngine(data_path)
-                self.log_message(f'Dados carregados: {len(self.engine.df)} registros de {data_path}')
-                self.reload_plugins()
-            except Exception as e:
-                self.log_message(f'Erro ao carregar dados: {e}', is_error=True)
-                print(f"Error loading data: {e}")
+            # Initialize engine
+            return WurmStatsEngine(data_path)
 
-        t = threading.Thread(target=job, daemon=True)
-        t.start()
+        # Define success callback
+        def on_success(engine):
+            self.engine = engine
+            self.log_message(f'Dados carregados com sucesso: {len(self.engine.df):,} registros.')
+            self.reload_plugins()
+            self.set_status("Pronto")
+
+        # Define error callback
+        def on_error(e):
+            self.log_message(f'Erro fatal ao carregar dados: {e}', is_error=True)
+            self.set_status("Erro no carregamento")
+
+        # Start async operation
+        checker = self.async_loader.load_async(load_job, on_success, on_error)
+        
+        # Start polling loop (50ms latency as requested)
+        self._poll_loader(checker)
+
+    def _poll_loader(self, checker):
+        """Poll the async loader every 50ms."""
+        if not checker():
+            # If checker returns False, it means still loading
+            self.after(50, lambda: self._poll_loader(checker))
 
     def on_search(self):
         q = self.search_entry.get()
