@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.zip
+*.txt
+data/
+.venv/
+.gemini/
