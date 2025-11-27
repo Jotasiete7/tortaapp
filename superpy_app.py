@@ -38,6 +38,7 @@ import time
 import sys
 import subprocess
 from wurm_stats_engine import WurmStatsEngine
+from ml_predictor import MLPredictor
 from threading_utils import AsyncDataLoader
 import customtkinter as ctk
 ctk.set_appearance_mode("dark")
@@ -222,6 +223,7 @@ class SuperPyGUI(ctk.CTk):
 
         # data
         self.engine = None
+        self.ml_predictor = MLPredictor()
         self.plugins_meta = {}
         self.plugins_modules = {}
 
@@ -249,6 +251,7 @@ class SuperPyGUI(ctk.CTk):
             ('🧭', 'Avançado', self.show_advanced),
             ('📊', 'Estatísticas', self.show_stats),
             ('📈', 'Gráficos', self.show_charts),
+            ('🔮', 'Insights', self.show_insights),
             ('🧩', 'Plugins', self.show_plugins),
             ('⚙️', 'Config', self.show_config),
             ('❓', 'Ajuda', self.show_help),
@@ -261,7 +264,7 @@ class SuperPyGUI(ctk.CTk):
 
         # dynamic content frames
         self.frames = {}
-        for name in ['search', 'advanced', 'stats', 'charts', 'plugins', 'config', 'help']:
+        for name in ['search', 'advanced', 'stats', 'charts', 'insights', 'plugins', 'config', 'help']:
             f = tk.Frame(self.content, bg=BG)
             self.frames[name] = f
 
@@ -269,6 +272,7 @@ class SuperPyGUI(ctk.CTk):
         self._build_advanced_frame()
         self._build_stats_frame()
         self._build_charts_frame()
+        self._build_insights_frame()
         self._build_plugins_frame()
         self._build_config_frame()
         self._build_help_frame()
@@ -442,6 +446,84 @@ class SuperPyGUI(ctk.CTk):
         self.chart_frame.pack(fill='both', expand=True, padx=8, pady=8)
         self.canvas = None
 
+    def _build_insights_frame(self):
+        f = self.frames['insights']
+        
+        # Header
+        top = tk.Frame(f, bg=BG)
+        top.pack(fill='x', pady=8, padx=8)
+        
+        tk.Label(top, text='Insights Preditivos (ML)', bg=BG, font=("Segoe UI", 14, "bold")).pack(side='left')
+        tk.Button(top, text='Gerar Insights', command=self.on_generate_insights, font=FONT, bg=ACCENT, fg='white').pack(side='right', padx=8)
+
+        # Description
+        desc = tk.Label(f, text='O sistema analisará os dados carregados em busca de anomalias de preço e oportunidades de mercado.', 
+                        bg=BG, fg='#aaaaaa', font=("Segoe UI", 9))
+        desc.pack(fill='x', padx=8, pady=(0, 8))
+
+        # Results Area (Treeview)
+        tree_frame = tk.Frame(f, bg=BG)
+        tree_frame.pack(fill='both', expand=True, padx=8, pady=8)
+        
+        self.insights_tree = ttk.Treeview(tree_frame, columns=('Item', 'Preço', 'Tipo', 'Detalhe', 'Score'), show='headings')
+        self.insights_tree.heading('Item', text='Item')
+        self.insights_tree.heading('Preço', text='Preço')
+        self.insights_tree.heading('Tipo', text='Tipo')
+        self.insights_tree.heading('Detalhe', text='Detalhe')
+        self.insights_tree.heading('Score', text='Score (Z)')
+        
+        self.insights_tree.column('Item', width=150)
+        self.insights_tree.column('Preço', width=80)
+        self.insights_tree.column('Tipo', width=120)
+        self.insights_tree.column('Detalhe', width=300)
+        self.insights_tree.column('Score', width=60)
+        
+        vsb = ttk.Scrollbar(tree_frame, orient="vertical", command=self.insights_tree.yview)
+        self.insights_tree.configure(yscrollcommand=vsb.set)
+        
+        self.insights_tree.pack(side='left', fill='both', expand=True)
+        vsb.pack(side='right', fill='y')
+
+    def on_generate_insights(self):
+        if not self.engine:
+            messagebox.showerror('Erro', 'Dados não carregados.')
+            return
+            
+        self.log_message('Iniciando análise preditiva (ML)...')
+        self.set_status("Processando ML...")
+        
+        # Clear tree
+        for i in self.insights_tree.get_children():
+            self.insights_tree.delete(i)
+            
+        # Async execution
+        def run_ml():
+            return self.ml_predictor.run_prediction(self.engine.df)
+            
+        def on_success(results):
+            self.log_message(f'Análise concluída. {len(results)} insights gerados.')
+            self.set_status("Pronto")
+            
+            for res in results:
+                if "insight" in res and len(res) == 1:
+                     # Error or info message
+                     self.insights_tree.insert('', 'end', values=('-', '-', 'Info', res['insight'], '-'))
+                else:
+                    self.insights_tree.insert('', 'end', values=(
+                        res.get('Item', '?'),
+                        res.get('Preço', '?'),
+                        res.get('Tipo', '?'),
+                        res.get('Detalhe', '?'),
+                        res.get('Score', '?')
+                    ))
+                    
+        def on_error(e):
+            self.log_message(f'Erro na análise ML: {e}', is_error=True)
+            self.set_status("Erro ML")
+            
+        checker = self.async_loader.load_async(run_ml, on_success, on_error)
+        self._poll_loader(checker)
+
     def _build_plugins_frame(self):
         f = self.frames['plugins']
         top = tk.Frame(f, bg=BG)
@@ -586,6 +668,10 @@ Criado por: Jotasiete7 | Versão: 2.0
     def show_charts(self):
         self._hide_all_frames()
         self.frames['charts'].pack(fill='both', expand=True)
+
+    def show_insights(self):
+        self._hide_all_frames()
+        self.frames['insights'].pack(fill='both', expand=True)
 
     def show_plugins(self):
         self._hide_all_frames()

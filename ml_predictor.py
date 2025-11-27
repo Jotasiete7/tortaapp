@@ -2,96 +2,117 @@
 # Módulo de Preparação e Previsão de Machine Learning
 # Responsável por:
 # 1. Receber o DataFrame limpo do StatisticsEngine.
-# 2. Realizar a Engenharia de Features necessária (e.g., One-Hot Encoding).
-# 3. Carregar um modelo de ML pré-treinado (ou iniciar o processo de treinamento).
-# 4. Gerar insights preditivos para a GUI.
+# 2. Realizar a Engenharia de Features necessária.
+# 3. Gerar insights preditivos baseados em estatística (Z-Score/IQR).
 
 import pandas as pd
-# Importações futuras: from sklearn.cluster import KMeans
-# from statsmodels.tsa.arima.model import ARIMA
 import numpy as np
 
 class MLPredictor:
     """
-    Classe responsável por preparar os dados para ML e gerar previsões.
+    Classe responsável por preparar os dados e gerar insights estatísticos/ML.
     """
     def __init__(self):
-        # Aqui, no futuro, carregaremos o modelo treinado.
-        self.model = None 
-        # Ex: self.model = load_model('kmeans_trade_clusters.pkl')
-        print("MLPredictor inicializado. Modelo de ML não carregado (stub).")
+        print("MLPredictor inicializado.")
 
     def preprocess_for_ml(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Ação A4: Projeta a sanitização e conversão de features categóricas para numéricas.
-        Esta etapa é crucial para alimentar algoritmos como K-Means ou Regressão.
+        Prepara o DataFrame para análise.
+        Foca em limpar dados nulos e garantir tipos numéricos corretos.
 
         :param df: DataFrame limpo do StatisticsEngine.
-        :return: DataFrame pronto para o consumo do modelo de ML.
+        :return: DataFrame pronto para análise.
         """
         if df.empty:
             return pd.DataFrame()
 
-        # 1. Feature Engineering: Conversão de Item Name (variável categórica)
-        # O One-Hot Encoding cria colunas binárias para cada item.
-        # Isto é essencial para que o modelo de ML possa processar o nome do item.
-        df_ml = pd.get_dummies(df, columns=['Item Name'], prefix='item', drop_first=False)
+        # Trabalhar com uma cópia para não afetar o original
+        df_ml = df.copy()
+
+        # Garantir que temos colunas essenciais
+        required_cols = ['price_s', 'main_item']
+        for col in required_cols:
+            if col not in df_ml.columns:
+                return pd.DataFrame() # Falta dados essenciais
+
+        # Converter preço para numérico se não for
+        df_ml['price_s'] = pd.to_numeric(df_ml['price_s'], errors='coerce')
         
-        # 2. Extração de Features Temporais (útil para Séries Temporais ou Previsão)
-        if 'Timestamp' in df.columns:
-            df_ml['hour'] = df['Timestamp'].dt.hour
-            df_ml['dayofweek'] = df['Timestamp'].dt.dayofweek
-        
-        # 3. Seleção de Features Numéricas para o Modelo
-        # As features de preço e volume são geralmente usadas.
-        features = [col for col in df_ml.columns if col.startswith(('Price', 'Volume', 'item_')) or col in ['hour', 'dayofweek']]
-        
-        # Remover colunas que possam causar vazamento de dados (e.g., Margem de Lucro calculada posteriormente)
-        features_clean = [f for f in features if f not in ['Profit Margin', 'Risk Trend']] 
-        
-        return df_ml[features_clean]
+        # Remover linhas sem preço ou item
+        df_ml.dropna(subset=['price_s', 'main_item'], inplace=True)
+
+        return df_ml
 
     def predict_opportunities(self, df_ml_ready: pd.DataFrame) -> list:
         """
-        Simula a execução de um modelo de ML para identificar oportunidades.
-        Na FASE 5, este método será a espinha dorsal da aba "Insights Preditivos".
+        Identifica oportunidades de mercado baseadas em anomalias de preço (Z-Score).
         
-        :param df_ml_ready: DataFrame após o pré-processamento.
-        :return: Lista de dicionários com insights (Item, Preço Anômalo, Sugestão).
+        :param df_ml_ready: DataFrame pré-processado.
+        :return: Lista de dicionários com insights.
         """
         if df_ml_ready.empty:
-            return [{"insight": "Dados insuficientes para análise preditiva."}]
+            return [{"insight": "Dados insuficientes para análise."}]
         
-        # --- Lógica de Simulação (Para ser substituída na FASE 5) ---
-        # Simula a detecção de preços anômalos (outliers)
+        insights = []
         
-        # Para fins de stub, calculamos o Z-Score para o preço de venda
-        if 'Price WTS' in df_ml_ready.columns:
-            mean_price = df_ml_ready['Price WTS'].mean()
-            std_price = df_ml_ready['Price WTS'].std()
-            
-            # Identifica trades onde o preço está 2 desvios padrão acima da média
-            df_anomalies = df_ml_ready[df_ml_ready['Price WTS'] > (mean_price + 2 * std_price)].head(3)
-            
-            insights = []
-            for index, row in df_anomalies.iterrows():
-                # Reverte o One-Hot Encoding para obter o nome do item original (simplificado)
-                item_name_cols = [col for col in row.index if col.startswith('item_') and row[col] == 1]
-                item_name = item_name_cols[0].replace('item_', '') if item_name_cols else 'UNKNOWN ITEM'
+        # Análise por Item (agrupado)
+        # Calculamos média e desvio padrão por item para encontrar anomalias locais
+        # Filtramos apenas itens com volume razoável para ter significância estatística
+        
+        item_stats = df_ml_ready.groupby('main_item')['price_s'].agg(['mean', 'std', 'count'])
+        # Considerar apenas itens com pelo menos 5 transações
+        significant_items = item_stats[item_stats['count'] >= 5]
+        
+        if significant_items.empty:
+             return [{"insight": "Poucos dados por item para análise estatística robusta (min 5 trades)."}]
 
-                insights.append({
-                    "Item": item_name,
-                    "Preço Anômalo (WTS)": f"R${row['Price WTS']:.2f}",
-                    "Sugestão": "Venda Rápida (Preço acima da tendência).",
-                    "Score de Risco": f"{np.random.rand():.2f}"
-                })
+        # Iterar sobre itens significativos e buscar outliers nos dados originais
+        # Isso pode ser lento se houver muitos itens, então vamos otimizar
+        # Vamos calcular o Z-Score para cada transação RELATIVO ao seu item
+        
+        # Merge das estatísticas de volta ao dataframe original
+        df_merged = df_ml_ready.merge(significant_items, on='main_item', suffixes=('', '_stats'))
+        
+        # Calcular Z-Score: (Preço - Média) / Std
+        df_merged['z_score'] = (df_merged['price_s'] - df_merged['mean']) / df_merged['std']
+        
+        # Identificar anomalias: |Z-Score| > 2 (aprox 2 desvios padrão)
+        # Z-Score < -2: Preço muito abaixo da média (Oportunidade de Compra?)
+        # Z-Score > 2: Preço muito acima da média (Oportunidade de Venda?)
+        
+        anomalies = df_merged[df_merged['z_score'].abs() > 2].copy()
+        
+        # Ordenar por magnitude da anomalia
+        anomalies.sort_values(by='z_score', key=abs, ascending=False, inplace=True)
+        
+        # Limitar a top 20 insights para não poluir a UI
+        top_anomalies = anomalies.head(20)
+        
+        for _, row in top_anomalies.iterrows():
+            item = row['main_item']
+            price = row['price_s']
+            mean_price = row['mean']
+            z = row['z_score']
             
-            if not insights:
-                return [{"insight": "Nenhuma anomalia de preço detectada neste conjunto de dados."}]
+            if z < -2:
+                tipo = "Preço Baixo (Compra)"
+                desc = f"Está {abs(z):.1f}x desvios abaixo da média ({mean_price:.2f}s)."
+            else:
+                tipo = "Preço Alto (Venda)"
+                desc = f"Está {z:.1f}x desvios acima da média ({mean_price:.2f}s)."
             
-            return insights
-
-        return [{"insight": "Coluna de preço não encontrada após pré-processamento."}]
+            insights.append({
+                "Item": item,
+                "Preço": f"{price:.2f}s",
+                "Tipo": tipo,
+                "Detalhe": desc,
+                "Score": round(abs(z), 2)
+            })
+            
+        if not insights:
+            return [{"insight": "Nenhuma anomalia significativa detectada (Z-Score > 2)."}]
+            
+        return insights
 
     def run_prediction(self, df_clean: pd.DataFrame) -> list:
         """ Executa o pipeline completo: pré-processamento e previsão. """
