@@ -438,7 +438,7 @@ class WurmStatsEngine:
     def otimizar_dataframe(self) -> None:
         """
         Otimiza o DataFrame para reduzir uso de memória.
-        Converte strings para category e define índice otimizado.
+        Converte strings para category.
         """
         logger.info("Otimizando DataFrame...")
         
@@ -453,12 +453,14 @@ class WurmStatsEngine:
                     self.df[col] = self.df[col].astype('category')
                     logger.info(f"Converted '{col}' to category")
         
-        # Set optimized multi-index if possible
-        if 'date' in self.df.columns and 'main_item' in self.df.columns:
-            valid_data = self.df.dropna(subset=['date', 'main_item'])
-            if len(valid_data) > 0:
-                self.df = valid_data.set_index(['date', 'main_item'], drop=False).sort_index()
-                logger.info("Set multi-index on [date, main_item]")
+        # Don't create MultiIndex - it causes issues with value_counts()
+        # Just sort by date if available
+        if 'date' in self.df.columns:
+            try:
+                self.df = self.df.sort_values('date')
+                logger.info("DataFrame sorted by date")
+            except Exception as e:
+                logger.warning(f"Could not sort by date: {e}")
         
         memory_after = round(self.df.memory_usage(deep=True).sum() / 1024**2, 2)
         logger.info(f"Optimization complete. Memory usage: {memory_after}MB")
@@ -479,26 +481,30 @@ class WurmStatsEngine:
         # Advanced Stats (Volatility/Risk)
         risk_analysis = ""
         if 'price_s' in self.df.columns and 'main_item' in self.df.columns:
+            # Reset index temporarily to avoid MultiIndex issues
+            df_temp = self.df.reset_index(drop=True)
+            
             # Calculate volatility for top items
-            top_items = self.df['main_item'].value_counts().head(5).index
-            risk_analysis += "\\n=== ANÁLISE DE RISCO (Top 5 Itens) ===\\n"
+            top_items = df_temp['main_item'].value_counts().head(5).index.tolist()
+            risk_analysis += "\n=== ANÁLISE DE RISCO (Top 5 Itens) ===\n"
+            
             for item in top_items:
-                item_df = self.df[self.df['main_item'] == item]
+                item_df = df_temp[df_temp['main_item'] == item]
                 if len(item_df) > 5:
                     std_dev = item_df['price_s'].std()
                     mean_price = item_df['price_s'].mean()
                     cv = (std_dev / mean_price) * 100 if mean_price > 0 else 0
-                    risk_analysis += f"- {item}: CV {cv:.1f}% (Preço Médio: {mean_price:.2f}s)\\n"
+                    risk_analysis += f"- {item}: CV {cv:.1f}% (Preço Médio: {mean_price:.2f}s)\n"
         
         summary = (
-            f"=== ESTATÍSTICAS OTIMIZADAS ===\\n"
-            f"Registros Processados: {total_recs:,}\\n"
-            f"Volume Total Transacionado: {total_vol:,.2f}s\\n"
-            f"{risk_analysis}\\n"
+            f"=== ESTATÍSTICAS OTIMIZADAS ===\n"
+            f"Registros Processados: {total_recs:,}\n"
+            f"Volume Total Transacionado: {total_vol:,.2f}s\n"
+            f"{risk_analysis}\n"
             f"Otimização de Memória Concluída."
         )
         return summary
-
+    
     def __repr__(self) -> str:
         """Representação string do objeto."""
         return (f"WurmStatsEngine(records={len(self.df):,}, "
@@ -515,6 +521,60 @@ class WurmStatsEngine:
 
 
 # ==================== Exemplo de Uso ====================
+
+
+    def calculate_profit_margins(self, item_name: str) -> pd.DataFrame:
+        """
+        Calcula margens de lucro (WTS - WTB) para um item.
+        Vectorized implementation.
+        
+        Args:
+            item_name: Nome do item
+            
+        Returns:
+            DataFrame com margens por data
+        """
+        df_item = self.filter_by_item(item_name, exact=False)
+        
+        if 'operation' not in df_item.columns or 'price_s' not in df_item.columns or 'date' not in df_item.columns:
+            return pd.DataFrame()
+            
+        # Separate WTS and WTB
+        wts = df_item[df_item['operation'] == 'WTS'].groupby('date')['price_s'].min()
+        wtb = df_item[df_item['operation'] == 'WTB'].groupby('date')['price_s'].max()
+        
+        # Merge and calculate spread
+        margins = pd.DataFrame({'min_wts': wts, 'max_wtb': wtb})
+        margins['spread'] = margins['min_wts'] - margins['max_wtb']
+        margins['margin_pct'] = (margins['spread'] / margins['max_wtb']) * 100
+        
+        return margins.dropna().sort_index()
+
+    def calculate_risk_trends(self, item_name: str, window: int = 7) -> pd.DataFrame:
+        """
+        Calcula tendências de risco (Volatilidade + Média Móvel).
+        Vectorized implementation.
+        
+        Args:
+            item_name: Nome do item
+            window: Janela de dias
+            
+        Returns:
+            DataFrame com métricas de risco
+        """
+        # Reuse existing methods but ensure they return compatible DataFrames
+        vol = self.calculate_volatility(item_name, window)
+        ma = self.calculate_mean_average(item_name, window)
+        
+        if vol.empty or ma.empty:
+            return pd.DataFrame()
+            
+        # Merge on date
+        risk = pd.merge(vol[['date', 'volatility']], ma[['date', 'moving_average']], on='date', how='inner')
+        risk['risk_score'] = risk['volatility'] / risk['moving_average']
+        
+        return risk.set_index('date').sort_index()
+
 
 
     def calculate_profit_margins(self, item_name: str) -> pd.DataFrame:

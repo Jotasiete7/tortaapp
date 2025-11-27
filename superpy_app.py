@@ -64,6 +64,7 @@ PLUGINS_DIR = os.path.join(os.path.dirname(__file__), "plugins")
 BG = '#F5F5F5'  # Light gray background
 PANEL_BG = '#E8E8E8'  # Slightly darker gray for panels
 ACCENT = '#2E86AB'  # Blue accent
+TEXT = '#2C2C2C'  # Dark gray text for readability
 FONT = ('Segoe UI', 10)
 
 
@@ -479,7 +480,8 @@ class SuperPyGUI(ctk.CTk):
         self.chart_type = tk.StringVar(value="Price History")
         tk.OptionMenu(controls, self.chart_type, "Price History", "Volume/Activity").pack(side='left', padx=6)
         
-        tk.Button(controls, text='Gerar Gráfico', command=self.on_generate_chart, font=FONT).pack(side='left', padx=6)
+        tk.Button(controls, text='Gerar Gráfico', command=self.on_generate_chart, font=FONT, bg=ACCENT, fg='white').pack(side='left', padx=6)
+        tk.Button(controls, text='Salvar Gráfico', command=self.on_save_chart, font=FONT).pack(side='left', padx=6)
         
         # Chart area
         self.chart_frame = tk.Frame(f, bg='white')
@@ -859,63 +861,51 @@ Criado por: Jotasiete7 | Versão: 2.0
         for widget in self.chart_frame.winfo_children():
             widget.destroy()
 
-        fig = Figure(figsize=(8, 5), dpi=100)
-        ax = fig.add_subplot(111)
-
         try:
             if ctype == "Price History":
                 if not item:
                     messagebox.showinfo('Aviso', 'Digite o nome do item para histórico de preços.')
                     return
                 
-                # Get data
-                df = self.engine.filter_by_item(item)
-                if df.empty:
-                    messagebox.showinfo('Aviso', 'Nenhum dado encontrado para este item.')
-                    return
-                
-                # Group by date and get mean price
-                if 'date' in df.columns and 'price_s' in df.columns:
-                    # Reset index to avoid ambiguity if date is both index and column
-                    df_chart = df.reset_index(drop=True)
-                    daily = df_chart.groupby('date')['price_s'].mean()
-                    ax.plot(daily.index, daily.values, marker='o', linestyle='-')
-                    ax.set_title(f'Histórico de Preço Médio: {item}')
-                    ax.set_xlabel('Data')
-                    ax.set_ylabel('Preço (s)')
-                    fig.autofmt_xdate()
-                else:
-                    ax.text(0.5, 0.5, 'Dados insuficientes (falta data ou preço)', ha='center')
+                fig = self.charts_engine.create_price_trend_chart(self.engine.df, item)
 
             elif ctype == "Volume/Activity":
-                # If item is specified, filter by it, else global volume
-                if item:
-                    df = self.engine.filter_by_item(item)
-                    title = f'Volume Diário: {item}'
-                else:
-                    df = self.engine.df
-                    title = 'Volume Global de Trades'
-                
-                if 'date' in df.columns:
-                    # Reset index to avoid ambiguity
-                    df_chart = df.reset_index(drop=True)
-                    daily_vol = df_chart.groupby('date').size()
-                    ax.bar(daily_vol.index, daily_vol.values, color='skyblue')
-                    ax.set_title(title)
-                    ax.set_xlabel('Data')
-                    ax.set_ylabel('Transações')
-                    fig.autofmt_xdate()
-                else:
-                    ax.text(0.5, 0.5, 'Dados insuficientes (falta data)', ha='center')
+                if not item:
+                    messagebox.showinfo('Aviso', 'Digite o nome do item para volume.')
+                    return
+                    
+                fig = self.charts_engine.create_volume_chart(self.engine.df, item)
 
             # Draw
             self.canvas = FigureCanvasTkAgg(fig, master=self.chart_frame)
             self.canvas.draw()
             self.canvas.get_tk_widget().pack(side='top', fill='both', expand=True)
+            
+            self.log_message(f'Gráfico gerado: {ctype} - {item}')
 
         except Exception as e:
             messagebox.showerror('Erro', f'Erro ao gerar gráfico: {e}')
-            print(e)
+            self.log_message(f'Erro ao gerar gráfico: {e}', is_error=True)
+    
+    def on_save_chart(self):
+        """Salva o gráfico atual em arquivo."""
+        if self.charts_engine.current_figure is None:
+            messagebox.showinfo('Aviso', 'Gere um gráfico primeiro.')
+            return
+        
+        filepath = filedialog.asksaveasfilename(
+            defaultextension=".png",
+            filetypes=[("PNG Image", "*.png"), ("PDF Document", "*.pdf"), ("SVG Vector", "*.svg")]
+        )
+        
+        if filepath:
+            try:
+                self.charts_engine.save_chart(filepath)
+                messagebox.showinfo('Sucesso', f'Gráfico salvo em:\n{filepath}')
+                self.log_message(f'Gráfico salvo: {filepath}')
+            except Exception as e:
+                messagebox.showerror('Erro', f'Erro ao salvar: {e}')
+                self.log_message(f'Erro ao salvar gráfico: {e}', is_error=True)
 
     # ------------------ plugins ------------------
     def reload_plugins(self):
