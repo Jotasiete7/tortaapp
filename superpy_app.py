@@ -708,6 +708,10 @@ Criado por: Jotasiete7 | Versão: 2.0
         self._hide_all_frames()
         self.frames['charts'].pack(fill='both', expand=True)
 
+    def show_insights(self):
+        self._hide_all_frames()
+        self.frames['insights'].pack(fill='both', expand=True)
+
     def show_plugins(self):
         self._hide_all_frames()
         self.frames['plugins'].pack(fill='both', expand=True)
