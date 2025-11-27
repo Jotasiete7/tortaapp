@@ -40,6 +40,7 @@ import subprocess
 from wurm_stats_engine import WurmStatsEngine
 from ml_predictor import MLPredictor
 from threading_utils import AsyncDataLoader
+from charts_engine import ChartsEngine
 import customtkinter as ctk
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
@@ -59,16 +60,15 @@ TRADE_ZIP_PATH = r"wurm_trade_master_2025_clean.txt"
 DEFAULT_DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 PLUGINS_DIR = os.path.join(os.path.dirname(__file__), "plugins")
 
-# UI styling values (minimal-retro modern)
-BG = "#1a1a1a"
-PANEL_BG = "#2b2b2b"
-ACCENT = "#1f6aa5"
-TEXT = "#ffffff"
-BUTTON_RADIUS = 4
-FONT = ("Segoe UI", 10)
-ICON_FONT = ("Segoe UI", 12)
+# UI Color Scheme (Lighter for better readability)
+BG = '#F5F5F5'  # Light gray background
+PANEL_BG = '#E8E8E8'  # Slightly darker gray for panels
+ACCENT = '#2E86AB'  # Blue accent
+FONT = ('Segoe UI', 10)
+
 
 # ------------------------------
+# Configuration / Defaults
 # Utilities: data extraction + loading
 # ------------------------------
 
@@ -224,6 +224,7 @@ class SuperPyGUI(ctk.CTk):
         # data
         self.engine = None
         self.ml_predictor = MLPredictor()
+        self.charts_engine = ChartsEngine()
         self.plugins_meta = {}
         self.plugins_modules = {}
 
