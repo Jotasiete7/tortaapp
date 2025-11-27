@@ -389,7 +389,7 @@ class SuperPyGUI(ctk.CTk):
         # Toolbar
         top = tk.Frame(f, bg=BG)
         top.pack(fill='x', pady=8)
-        tk.Button(top, text='Atualizar Estatísticas', command=self.refresh_stats).pack(side='left', padx=8)
+        tk.Button(top, text='Atualizar Estatísticas', command=self.on_generate_stats).pack(side='left', padx=8)
         tk.Button(top, text='Exportar CSV', command=self.export_stats).pack(side='left', padx=8)
 
         # Split view: Text summary on top, Treeview on bottom
@@ -415,43 +415,43 @@ class SuperPyGUI(ctk.CTk):
         
         paned.add(tree_frame)
 
-    def refresh_stats(self):
+    def on_generate_stats(self):
         if not self.engine:
             self.log_message('Engine não carregado. Carregue os dados primeiro.', is_error=True)
             return
             
+        self.log_message('Gerando estatísticas otimizadas (Async)...')
+        self.set_status("Calculando Estatísticas...")
+        
         self.stats_text.delete('1.0', tk.END)
         # Clear tree
         for i in self.stats_tree.get_children():
             self.stats_tree.delete(i)
             
-        try:
-            # Text Summary
-            self.stats_text.insert(tk.END, "=== RESUMO ESTATÍSTICO ===\n\n")
-            self.stats_text.insert(tk.END, f"Total de Registros: {len(self.engine.df):,}\n")
-            self.stats_text.insert(tk.END, f"Colunas: {len(self.engine.df.columns)}\n\n")
+        def run_stats():
+            return self.engine.run_optimized()
             
-            # Basic info
-            if 'date' in self.engine.df.columns:
-                date_min = self.engine.df['date'].min()
-                date_max = self.engine.df['date'].max()
-                self.stats_text.insert(tk.END, f"Período: {date_min} até {date_max}\n\n")
+        def on_success(summary):
+            self.stats_text.insert(tk.END, summary)
             
-            # Top Items to Treeview
+            # Populate Top Items Treeview (reuse existing logic if needed or from summary)
+            # For now, we'll just reload top items from engine directly as it's fast enough
+            # or we could have run_optimized return a dict with both summary and top items.
+            # Let's keep it simple and just show top items here as before.
             if 'main_item' in self.engine.df.columns:
                 top_items = self.engine.df['main_item'].value_counts().head(50)
                 for item, count in top_items.items():
                     self.stats_tree.insert('', 'end', values=(str(item), int(count)))
-                self.stats_text.insert(tk.END, f"Top {len(top_items)} itens carregados na tabela abaixo.\n")
-            else:
-                self.stats_text.insert(tk.END, "Coluna 'main_item' não encontrada.\n")
-                
-            self.log_message('Estatísticas atualizadas com sucesso')
-                
-        except Exception as e:
-            error_msg = f"Erro ao gerar estatísticas: {str(e)}"
-            self.stats_text.insert(tk.END, error_msg)
-            self.log_message(error_msg, is_error=True)
+            
+            self.log_message('Estatísticas geradas com sucesso.')
+            self.set_status("Pronto")
+            
+        def on_error(e):
+            self.log_message(f'Erro ao gerar estatísticas: {e}', is_error=True)
+            self.set_status("Erro Stats")
+            
+        checker = self.async_loader.load_async(run_stats, on_success, on_error)
+        self._poll_loader(checker)
 
     def export_stats(self):
         if not self.engine:

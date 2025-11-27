@@ -2,7 +2,7 @@
 Wurm Online Trade Analyzer - Statistics Engine
 ===============================================
 
-Este m?dulo fornece a classe WurmStatsEngine para carregar e analisar
+Este módulo fornece a classe WurmStatsEngine para carregar e analisar
 dados de trade do Wurm Online usando Pandas.
 
 Autor: Senior Python Engineer
@@ -16,17 +16,17 @@ from typing import Optional, Union, List, Dict, Any
 from datetime import datetime
 import logging
 
-# Configura??o de logging
+# Configuração de logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
 class WurmStatsEngine:
     """
-    Motor de estat?sticas para an?lise de dados de trade do Wurm Online.
+    Motor de estatísticas para análise de dados de trade do Wurm Online.
     
-    Esta classe carrega dados de arquivos JSON Lines e fornece m?todos
-    para an?lise estat?stica avan?ada usando Pandas DataFrame.
+    Esta classe carrega dados de arquivos JSON Lines e fornece métodos
+    para análise estatística avançada usando Pandas DataFrame.
     
     Attributes:
         data_path (Path): Caminho para o arquivo de dados
@@ -41,11 +41,11 @@ class WurmStatsEngine:
         
         Args:
             data_path: Caminho para o arquivo de dados JSON Lines
-            sample_size: N?mero de linhas para carregar (None = todas). 
-                        ?til para testes com arquivos grandes.
+            sample_size: Número de linhas para carregar (None = todas). 
+                        Útil para testes com arquivos grandes.
             
         Raises:
-            FileNotFoundError: Se o arquivo n?o existir
+            FileNotFoundError: Se o arquivo não existir
             ValueError: Se o arquivo estiver vazio ou mal formatado
         """
         self.data_path = Path(data_path)
@@ -53,12 +53,12 @@ class WurmStatsEngine:
         self.metadata: Dict[str, Any] = {}
         self.sample_size = sample_size
         
-        # Valida??o do arquivo
+        # Validação do arquivo
         if not self.data_path.exists():
-            raise FileNotFoundError(f"Arquivo n?o encontrado: {self.data_path}")
+            raise FileNotFoundError(f"Arquivo não encontrado: {self.data_path}")
         
         if not self.data_path.is_file():
-            raise ValueError(f"O caminho n?o ? um arquivo: {self.data_path}")
+            raise ValueError(f"O caminho não é um arquivo: {self.data_path}")
         
         # Carrega os dados
         logger.info(f"Iniciando carregamento de {self.data_path.name}...")
@@ -67,16 +67,16 @@ class WurmStatsEngine:
         # Gera metadados
         self._generate_metadata()
         
-        logger.info(f"? Dados carregados: {len(self.df):,} registros, {len(self.df.columns)} colunas")
+        logger.info(f"✔ Dados carregados: {len(self.df):,} registros, {len(self.df.columns)} colunas")
     
     def _load_data(self) -> None:
         """
         Carrega os dados do arquivo JSON Lines para um DataFrame.
         
-        O arquivo ? esperado no formato JSON Lines (cada linha ? um objeto JSON).
+        O arquivo é esperado no formato JSON Lines (cada linha é um objeto JSON).
         """
         try:
-            # L? o arquivo JSON Lines
+            # Lê o arquivo JSON Lines
             logger.info("Lendo arquivo JSON Lines...")
             
             data_list = []
@@ -88,7 +88,7 @@ class WurmStatsEngine:
                     try:
                         data_list.append(json.loads(line.strip()))
                     except json.JSONDecodeError as e:
-                        logger.warning(f"Linha {i+1} inv?lida, pulando: {e}")
+                        logger.warning(f"Linha {i+1} inválida, pulando: {e}")
                         continue
                     
                     # Log de progresso a cada 10k linhas
@@ -96,7 +96,7 @@ class WurmStatsEngine:
                         logger.info(f"Processadas {i+1:,} linhas...")
             
             if not data_list:
-                raise ValueError("Nenhum dado v?lido encontrado no arquivo")
+                raise ValueError("Nenhum dado válido encontrado no arquivo")
             
             # Cria DataFrame
             logger.info(f"Criando DataFrame com {len(data_list):,} registros...")
@@ -108,13 +108,13 @@ class WurmStatsEngine:
             # Processa colunas de data
             self._process_dates()
             
-            # Processa colunas num?ricas
+            # Processa colunas numéricas
             self._process_numeric_columns()
             
-            # Configura ?ndice otimizado
+            # Configura índice otimizado
             self._setup_index()
             
-            logger.info(f"?? Colunas carregadas: {', '.join(self.df.columns[:10])}...")
+            logger.info(f"📋 Colunas carregadas: {', '.join(self.df.columns[:10])}...")
             
         except FileNotFoundError:
             raise
@@ -131,13 +131,13 @@ class WurmStatsEngine:
             if col in self.df.columns:
                 try:
                     self.df[col] = pd.to_datetime(self.df[col], errors='coerce')
-                    logger.info(f"?? Coluna '{col}' convertida para datetime")
+                    logger.info(f"📅 Coluna '{col}' convertida para datetime")
                 except Exception as e:
                     logger.warning(f"Erro ao converter '{col}': {e}")
     
     def _process_numeric_columns(self) -> None:
         """
-        Processa e converte colunas num?ricas.
+        Processa e converte colunas numéricas.
         """
         numeric_columns = ['main_qty', 'main_ql', 'main_dmg', 'main_wt', 'price_s']
         
@@ -146,35 +146,35 @@ class WurmStatsEngine:
                 try:
                     self.df[col] = pd.to_numeric(self.df[col], errors='coerce')
                 except Exception as e:
-                    logger.warning(f"Erro ao converter '{col}' para num?rico: {e}")
+                    logger.warning(f"Erro ao converter '{col}' para numérico: {e}")
     
     def _setup_index(self) -> None:
         """
-        Configura ?ndices otimizados para consultas r?pidas.
+        Configura índices otimizados para consultas rápidas.
         
-        Cria um MultiIndex com 'main_item' e 'date' se dispon?veis.
+        Cria um MultiIndex com 'main_item' e 'date' se disponíveis.
         """
         if 'main_item' in self.df.columns and 'date' in self.df.columns:
             try:
-                # Remove valores nulos antes de criar o ?ndice
+                # Remove valores nulos antes de criar o índice
                 valid_data = self.df.dropna(subset=['main_item', 'date'])
                 
                 if len(valid_data) > 0:
-                    # Cria uma c?pia do DataFrame com o novo ?ndice
+                    # Cria uma cópia do DataFrame com o novo índice
                     self.df = valid_data.set_index(['main_item', 'date'], drop=False)
-                    logger.info(f"?? MultiIndex criado: [main_item, date] ({len(self.df):,} registros)")
+                    logger.info(f"⚡ MultiIndex criado: [main_item, date] ({len(self.df):,} registros)")
                     self.metadata['index_type'] = 'MultiIndex'
                     self.metadata['index_columns'] = ['main_item', 'date']
                 else:
-                    logger.warning("?? Nenhum registro v?lido para criar ?ndice")
+                    logger.warning("⚠️ Nenhum registro válido para criar índice")
             except Exception as e:
-                logger.warning(f"?? N?o foi poss?vel criar MultiIndex: {e}")
+                logger.warning(f"⚠️ Não foi possível criar MultiIndex: {e}")
         
         # Ordena por data para consultas temporais eficientes
         if 'timestamp' in self.df.columns:
             try:
                 self.df.sort_values('timestamp', inplace=True)
-                logger.info("?? DataFrame ordenado por timestamp")
+                logger.info("⚡ DataFrame ordenado por timestamp")
             except Exception as e:
                 logger.warning(f"Erro ao ordenar por timestamp: {e}")
     
@@ -195,34 +195,34 @@ class WurmStatsEngine:
             'sample_size': self.sample_size,
         })
         
-        # Adiciona estat?sticas de datas se dispon?vel
+        # Adiciona estatísticas de datas se disponível
         if 'date' in self.df.columns:
             self.metadata['date_range'] = {
                 'min': str(self.df['date'].min()),
                 'max': str(self.df['date'].max()),
             }
         
-        # Adiciona contagem de opera??es
+        # Adiciona contagem de operações
         if 'operation' in self.df.columns:
             self.metadata['operations_count'] = self.df['operation'].value_counts().to_dict()
     
-    # ==================== M?todos de An?lise ====================
+    # ==================== Métodos de Análise ====================
     
     def get_summary(self) -> pd.DataFrame:
         """
-        Retorna um resumo estat?stico do DataFrame.
+        Retorna um resumo estatístico do DataFrame.
         
         Returns:
-            DataFrame com estat?sticas descritivas
+            DataFrame com estatísticas descritivas
         """
         return self.df.describe(include='all')
     
     def get_info(self) -> str:
         """
-        Retorna informa??es sobre o DataFrame.
+        Retorna informações sobre o DataFrame.
         
         Returns:
-            String com informa??es do DataFrame
+            String com informações do DataFrame
         """
         import io
         buffer = io.StringIO()
@@ -234,22 +234,22 @@ class WurmStatsEngine:
         Retorna os metadados do dataset.
         
         Returns:
-            Dicion?rio com metadados
+            Dicionário com metadados
         """
         return self.metadata.copy()
     
     def filter_by_operation(self, operation: str) -> pd.DataFrame:
         """
-        Filtra dados por tipo de opera??o (WTS, WTB, WTT, PC).
+        Filtra dados por tipo de operação (WTS, WTB, WTT, PC).
         
         Args:
-            operation: Tipo de opera??o (ex: 'WTS', 'WTB')
+            operation: Tipo de operação (ex: 'WTS', 'WTB')
             
         Returns:
             DataFrame filtrado
         """
         if 'operation' not in self.df.columns:
-            raise ValueError("Coluna 'operation' n?o encontrada")
+            raise ValueError("Coluna 'operation' não encontrada")
         
         return self.df[self.df['operation'] == operation].copy()
     
@@ -265,7 +265,7 @@ class WurmStatsEngine:
             DataFrame filtrado
         """
         if 'main_item' not in self.df.columns:
-            raise ValueError("Coluna 'main_item' n?o encontrada")
+            raise ValueError("Coluna 'main_item' não encontrada")
         
         if exact:
             return self.df[self.df['main_item'] == item_name].copy()
@@ -285,30 +285,30 @@ class WurmStatsEngine:
             DataFrame filtrado
         """
         if 'date' not in self.df.columns:
-            raise ValueError("Coluna 'date' n?o encontrada")
+            raise ValueError("Coluna 'date' não encontrada")
         
         mask = (self.df['date'] >= start_date) & (self.df['date'] <= end_date)
         return self.df[mask].copy()
     
     def get_price_statistics(self, item_name: Optional[str] = None) -> pd.DataFrame:
         """
-        Retorna estat?sticas de pre?o.
+        Retorna estatísticas de preço.
         
         Args:
             item_name: Nome do item (opcional). Se None, retorna para todos os itens.
             
         Returns:
-            DataFrame com estat?sticas de pre?o
+            DataFrame com estatísticas de preço
         """
         if 'price_s' not in self.df.columns:
-            raise ValueError("Coluna 'price_s' n?o encontrada")
+            raise ValueError("Coluna 'price_s' não encontrada")
         
         df_filtered = self.df.copy()
         
         if item_name:
             df_filtered = self.filter_by_item(item_name)
         
-        # Remove valores nulos de pre?o
+        # Remove valores nulos de preço
         df_filtered = df_filtered[df_filtered['price_s'].notna()]
         
         if len(df_filtered) == 0:
@@ -336,8 +336,8 @@ class WurmStatsEngine:
         Retorna os itens mais negociados.
         
         Args:
-            n: N?mero de itens para retornar
-            operation: Filtrar por opera??o (opcional)
+            n: Número de itens para retornar
+            operation: Filtrar por operação (opcional)
             
         Returns:
             DataFrame com top N itens
@@ -348,7 +348,7 @@ class WurmStatsEngine:
             df_filtered = self.filter_by_operation(operation)
         
         if 'main_item' not in df_filtered.columns:
-            raise ValueError("Coluna 'main_item' n?o encontrada")
+            raise ValueError("Coluna 'main_item' não encontrada")
         
         top_items = df_filtered['main_item'].value_counts().head(n)
         return pd.DataFrame({
@@ -358,16 +358,16 @@ class WurmStatsEngine:
     
     def get_player_activity(self, player_name: Optional[str] = None) -> pd.DataFrame:
         """
-        Retorna estat?sticas de atividade de jogadores.
+        Retorna estatísticas de atividade de jogadores.
         
         Args:
             player_name: Nome do jogador (opcional)
             
         Returns:
-            DataFrame com estat?sticas de atividade
+            DataFrame com estatísticas de atividade
         """
         if 'player' not in self.df.columns:
-            raise ValueError("Coluna 'player' n?o encontrada")
+            raise ValueError("Coluna 'player' não encontrada")
         
         df_filtered = self.df.copy()
         
@@ -381,7 +381,7 @@ class WurmStatsEngine:
         
         return activity.sort_values('total_trades', ascending=False)
     
-    # ==================== M?todos Utilit?rios ====================
+    # ==================== Métodos Utilitários ====================
     
 
 
@@ -485,18 +485,54 @@ class WurmStatsEngine:
         memory_after = round(self.df.memory_usage(deep=True).sum() / 1024**2, 2)
         logger.info(f"Optimization complete. Memory usage: {memory_after}MB")
 
+    def run_optimized(self) -> str:
+        """
+        Executa otimização e retorna resumo estatístico avançado.
+        """
+        self.otimizar_dataframe()
+        
+        if self.df.empty:
+            return "Sem dados para analisar."
+            
+        # Basic Stats
+        total_recs = len(self.df)
+        total_vol = self.df['price_s'].sum() if 'price_s' in self.df.columns else 0
+        
+        # Advanced Stats (Volatility/Risk)
+        risk_analysis = ""
+        if 'price_s' in self.df.columns and 'main_item' in self.df.columns:
+            # Calculate volatility for top items
+            top_items = self.df['main_item'].value_counts().head(5).index
+            risk_analysis += "\\n=== ANÁLISE DE RISCO (Top 5 Itens) ===\\n"
+            for item in top_items:
+                item_df = self.df[self.df['main_item'] == item]
+                if len(item_df) > 5:
+                    std_dev = item_df['price_s'].std()
+                    mean_price = item_df['price_s'].mean()
+                    cv = (std_dev / mean_price) * 100 if mean_price > 0 else 0
+                    risk_analysis += f"- {item}: CV {cv:.1f}% (Preço Médio: {mean_price:.2f}s)\\n"
+        
+        summary = (
+            f"=== ESTATÍSTICAS OTIMIZADAS ===\\n"
+            f"Registros Processados: {total_recs:,}\\n"
+            f"Volume Total Transacionado: {total_vol:,.2f}s\\n"
+            f"{risk_analysis}\\n"
+            f"Otimização de Memória Concluída."
+        )
+        return summary
+
     def __repr__(self) -> str:
-        """Representa??o string do objeto."""
+        """Representação string do objeto."""
         return (f"WurmStatsEngine(records={len(self.df):,}, "
                 f"columns={len(self.df.columns)}, "
                 f"file='{self.data_path.name}')")
     
     def __str__(self) -> str:
-        """String amig?vel do objeto."""
+        """String amigável do objeto."""
         return f"Wurm Stats Engine: {len(self.df):,} registros de '{self.data_path.name}'"
     
     def __len__(self) -> int:
-        """Retorna o n?mero de registros."""
+        """Retorna o número de registros."""
         return len(self.df)
 
 
@@ -560,29 +596,29 @@ if __name__ == "__main__":
     print("=" * 70)
     print("Wurm Online Trade Analyzer - Statistics Engine")
     print("=" * 70)
-    print("\n?? Exemplo de uso:\n")
+    print("\\n🚀 Exemplo de uso:\\n")
     
     example_code = """
     # 1. Carregar dados (amostra de 1000 linhas para teste)
     engine = WurmStatsEngine('wurm_trade_master_2025_clean.txt', sample_size=1000)
     
-    # 2. Ver informa??es b?sicas
+    # 2. Ver informações básicas
     print(engine)
     print(f"Total de registros: {len(engine):,}")
     
     # 3. Ver metadados
     metadata = engine.get_metadata()
-    print(f"Per?odo: {metadata['date_range']['min']} a {metadata['date_range']['max']}")
+    print(f"Período: {metadata['date_range']['min']} a {metadata['date_range']['max']}")
     
-    # 4. Filtrar por opera??o
+    # 4. Filtrar por operação
     wts_data = engine.filter_by_operation('WTS')
     print(f"Vendas (WTS): {len(wts_data):,} registros")
     
-    # 5. Buscar item espec?fico
+    # 5. Buscar item específico
     rare_items = engine.filter_by_item('rare', exact=False)
     print(f"Itens raros: {len(rare_items):,} registros")
     
-    # 6. Estat?sticas de pre?o
+    # 6. Estatísticas de preço
     price_stats = engine.get_price_statistics()
     print(price_stats.head())
     
@@ -590,12 +626,12 @@ if __name__ == "__main__":
     top_items = engine.get_top_items(n=10)
     print(top_items)
     
-    # 8. Acessar DataFrame diretamente para an?lises customizadas
+    # 8. Acessar DataFrame diretamente para análises customizadas
     df = engine.df
-    # Agora voc? pode usar todo o poder do Pandas!
+    # Agora você pode usar todo o poder do Pandas!
     """
     
     print(example_code)
-    print("\n" + "=" * 70)
-    print("? M?dulo pronto para uso!")
+    print("\\n" + "=" * 70)
+    print("✅ Módulo pronto para uso!")
     print("=" * 70)
