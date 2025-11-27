@@ -1,104 +1,158 @@
-# 🥧 Torta App - Wurm Online Trade Analyzer
+# SuperPy - Wurm Online Trade Analyzer
 
-**Versão 2.0** | Análise avançada de trades do Wurm Online usando Pandas
+Analisador avançado de dados de trade do Wurm Online com Machine Learning e estatísticas otimizadas.
 
----
+## 🚀 Características
 
-## 📋 Descrição
+- **Carregamento Inteligente**: Sistema de cache automático (Parquet/Pickle) para carregamento instantâneo
+- **Análise ML**: Detecção de anomalias de preço usando Z-Score
+- **Estatísticas Avançadas**: Análise de volatilidade, risco e tendências
+- **Interface Moderna**: GUI responsiva com CustomTkinter
+- **Processamento Assíncrono**: UI nunca trava durante operações pesadas
+- **Visualizações**: Gráficos de preço, volume e atividade
 
-Torta App é um analisador de trades do Wurm Online que oferece:
-- ✅ **Interface moderna** com dark theme (CustomTkinter)
-- ✅ **Análise estatística avançada** com Pandas
-- ✅ **Gráficos interativos** (matplotlib)
-- ✅ **Métricas de volatilidade** e médias móveis
-- ✅ **Carregamento assíncrono** (não trava a UI)
-- ✅ **Console de log** integrado
-- ✅ **Sistema de plugins** extensível
+## 📋 Requisitos
 
----
+### Executável (Recomendado)
+- Windows 10/11
+- Nenhuma instalação adicional necessária
 
-## 🚀 Instalação
+### Executar do Código-Fonte
+- Python 3.10 ou superior
+- Dependências listadas em `requirements.txt`
 
-### Requisitos
-- Python 3.8 ou superior
+## 🔧 Instalação
 
-### Dependências
+### Opção 1: Usar Executável (Mais Fácil)
+1. Baixe `SuperPy.exe` da pasta `dist/`
+2. Execute o arquivo
+3. Pronto! 🎉
+
+### Opção 2: Executar do Código-Fonte
 ```bash
-pip install pandas customtkinter matplotlib
-```
+# Clone ou baixe o repositório
+cd "Torta app"
 
----
+# Instale as dependências
+pip install -r requirements.txt
 
-## 💻 Uso
-
-### Iniciar o App
-```bash
+# Execute o aplicativo
 python superpy_app.py
 ```
 
-### Carregar Dados
-1. Clique na aba **Config**
-2. Selecione o arquivo de dados Wurm (`.txt` em formato JSON Lines)
-3. Clique em **Aplicar e recarregar**
+## 📖 Como Usar
 
-### Gerar Gráficos
-1. Vá na aba **Gráficos**
-2. Digite o nome do item
-3. Escolha: `Price History` ou `Volume/Activity`
-4. Clique em **Gerar Gráfico**
+### 1. Carregar Dados
+- Clique em **"Config"** → **"Selecionar Arquivo de Dados"**
+- Escolha o arquivo `.txt` com os dados de trade
+- Aguarde o carregamento (primeira vez é mais lenta, depois usa cache)
 
----
+### 2. Buscar Itens
+- **Busca Simples**: Digite o nome do item e clique em "Buscar"
+- **Busca Avançada**: Use filtros por operação (WTS/WTB), data, preço, etc.
 
-## 📊 Features
+### 3. Ver Estatísticas
+- Clique em **"Estatísticas"**
+- Clique em **"Atualizar Estatísticas"**
+- Veja resumo, top itens e análise de risco
 
-### Análise Estatística
-- **Volatilidade de Preço**: Detecta variação de preços
-- **Médias Móveis**: Identifica tendências
-- **Top Itens**: Ranking dos mais negociados
-- **Exportar CSV**: Salvar dados para Excel
+### 4. Gerar Insights de ML
+- Clique em **"Insights" (🔮)**
+- Clique em **"Gerar Insights"**
+- Veja oportunidades de compra/venda detectadas automaticamente
 
-### Interface
-- Dark theme profissional
-- Console de log com timestamp
-- Gráficos embutidos (zoom/pan)
-- Tutorial integrado (aba Ajuda)
+### 5. Visualizar Gráficos
+- Clique em **"Gráficos"**
+- Selecione um item da lista
+- Escolha o tipo de gráfico (Preço ou Volume)
+- Clique em **"Gerar Gráfico"**
 
----
-
-## 🗂️ Estrutura
+## 🗂️ Estrutura de Arquivos
 
 ```
 Torta app/
-├── superpy_app.py          # GUI principal
-├── wurm_stats_engine.py    # Motor Pandas
-├── threading_utils.py      # AsyncDataLoader
-├── app_icon.png            # Ícone
-└── plugins/                # Plugins customizados
+├── superpy_app.py          # Aplicativo principal (GUI)
+├── wurm_stats_engine.py    # Motor de estatísticas (Pandas)
+├── ml_predictor.py         # Preditor de ML (Z-Score)
+├── wurm_parser.py          # Parser com cache inteligente
+├── threading_utils.py      # Utilitários de threading
+├── requirements.txt        # Dependências Python
+├── build_exe.py           # Script de build (PyInstaller)
+├── README.md              # Este arquivo
+└── data/                  # Cache e dados (criado automaticamente)
+    ├── trade_data_cache.parquet  # Cache rápido
+    └── trade_data_cache.pkl      # Cache fallback
 ```
 
+## 🛠️ Desenvolvimento
+
+### Construir Executável
+```bash
+# Instale PyInstaller
+pip install pyinstaller
+
+# Execute o script de build
+python build_exe.py
+
+# Executável estará em: dist/SuperPy.exe
+```
+
+### Executar Testes
+```bash
+# Instale dependências de teste
+pip install pytest pytest-cov
+
+# Execute testes
+pytest tests/
+
+# Com cobertura
+pytest --cov=. tests/
+```
+
+## 🐛 Solução de Problemas
+
+### "Erro ao carregar dados"
+- Verifique se o arquivo está no formato correto (JSON Lines)
+- Tente deletar a pasta `data/` para forçar reconstrução do cache
+
+### "UI travando"
+- Isso não deveria acontecer! Reporte o bug com detalhes da operação
+
+### "Gráfico não aparece"
+- Verifique se há dados suficientes para o item selecionado
+- Tente outro item com mais transações
+
+### "Cache desatualizado"
+- Delete os arquivos em `data/` para forçar rebuild
+- Ou use a opção "Recarregar" (se disponível)
+
+## 📊 Formato de Dados
+
+O aplicativo espera arquivos `.txt` no formato JSON Lines:
+```json
+{"timestamp": "2025-01-01 12:00:00", "main_item": "iron lump", "price_s": 50, "operation": "WTS", ...}
+{"timestamp": "2025-01-01 12:05:00", "main_item": "silver lump", "price_s": 100, "operation": "WTB", ...}
+```
+
+## 🤝 Contribuindo
+
+Contribuições são bem-vindas! Por favor:
+1. Fork o projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
+
+## 📝 Licença
+
+Este projeto é de código aberto. Use livremente!
+
+## 🙏 Agradecimentos
+
+- Comunidade Wurm Online
+- Desenvolvedores de Pandas, Matplotlib e CustomTkinter
+- Todos os contribuidores
+
 ---
 
-## 📜 Changelog
-
-### v2.0 (2025-11-26)
-- ✅ CustomTkinter dark theme
-- ✅ Análise de volatilidade/médias móveis
-- ✅ Tutorial integrado
-- ✅ Console de log
-- ✅ Otimização de memória
-
-### v1.0 (2025-11-26)
-- ✅ Motor Pandas
-- ✅ Gráficos matplotlib
-- ✅ Busca avançada
-
----
-
-## 👤 Autor
-
-**Jotasiete7**  
-GitHub: [tortaapp](https://github.com/Jotasiete7/tortaapp)
-
----
-
-**Divirta-se analisando! 🥧📈**
+**Desenvolvido com ❤️ para a comunidade Wurm Online**
