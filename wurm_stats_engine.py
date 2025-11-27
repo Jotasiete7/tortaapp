@@ -71,53 +71,31 @@ class WurmStatsEngine:
     
     def _load_data(self) -> None:
         """
-        Carrega os dados do arquivo JSON Lines para um DataFrame.
-        
-        O arquivo é esperado no formato JSON Lines (cada linha é um objeto JSON).
+        Carrega os dados usando o wurm_parser com suporte a cache inteligente.
         """
         try:
-            # Lê o arquivo JSON Lines
-            logger.info("Lendo arquivo JSON Lines...")
+            import wurm_parser
+            logger.info("Usando wurm_parser para carregamento inteligente...")
             
-            data_list = []
-            with open(self.data_path, 'r', encoding='latin-1') as f:
-                for i, line in enumerate(f):
-                    if self.sample_size and i >= self.sample_size:
-                        break
-                    
-                    try:
-                        data_list.append(json.loads(line.strip()))
-                    except json.JSONDecodeError as e:
-                        logger.warning(f"Linha {i+1} inválida, pulando: {e}")
-                        continue
-                    
-                    # Log de progresso a cada 10k linhas
-                    if (i + 1) % 10000 == 0:
-                        logger.info(f"Processadas {i+1:,} linhas...")
+            # Passa o diretório pai do arquivo de dados para o parser
+            # O parser vai buscar arquivos e gerenciar o cache
+            data_dir = self.data_path.parent
             
-            if not data_list:
-                raise ValueError("Nenhum dado válido encontrado no arquivo")
+            self.df = wurm_parser.load_data_and_build_cache(
+                str(data_dir), 
+                force_rebuild=False,
+                sample_size=self.sample_size
+            )
             
-            # Cria DataFrame
-            logger.info(f"Criando DataFrame com {len(data_list):,} registros...")
-            self.df = pd.DataFrame(data_list)
-            
-            # Limpeza inicial: remove linhas completamente vazias
-            self.df.dropna(how='all', inplace=True)
-            
-            # Processa colunas de data
-            self._process_dates()
-            
-            # Processa colunas numéricas
-            self._process_numeric_columns()
-            
-            # Configura índice otimizado
+            if self.df.empty:
+                raise ValueError("Nenhum dado retornado pelo parser")
+                
+            # Configura índice otimizado (se ainda não estiver configurado pelo parser/parquet)
+            # O parser já faz conversões de tipo, mas o índice pode precisar ser refeito
             self._setup_index()
             
             logger.info(f"📋 Colunas carregadas: {', '.join(self.df.columns[:10])}...")
             
-        except FileNotFoundError:
-            raise
         except Exception as e:
             raise RuntimeError(f"Erro ao carregar dados: {e}")
     
