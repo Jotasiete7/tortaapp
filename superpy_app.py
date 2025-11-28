@@ -41,6 +41,7 @@ from wurm_stats_engine import WurmStatsEngine
 from ml_predictor import MLPredictor
 from threading_utils import AsyncDataLoader
 from charts_engine import ChartsEngine
+from price_manager import PriceManager
 import customtkinter as ctk
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
@@ -59,6 +60,8 @@ import pandas as pd
 TRADE_ZIP_PATH = r"wurm_trade_master_2025_clean.txt"
 DEFAULT_DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 PLUGINS_DIR = os.path.join(os.path.dirname(__file__), "plugins")
+EXTERNAL_DIR = os.path.join(os.path.dirname(__file__), "external")
+PRICE_BASE_PATH = os.path.join(EXTERNAL_DIR, "lista preços fixos outubro 2024.csv")
 
 # UI Color Scheme (Lighter for better readability)
 BG = '#F5F5F5'  # Light gray background
@@ -226,6 +229,7 @@ class SuperPyGUI(ctk.CTk):
         self.engine = None
         self.ml_predictor = MLPredictor()
         self.charts_engine = ChartsEngine()
+        self.price_manager = PriceManager(PRICE_BASE_PATH)
         self.plugins_meta = {}
         self.plugins_modules = {}
 
@@ -415,7 +419,7 @@ class SuperPyGUI(ctk.CTk):
         tree_frame = tk.Frame(f, bg=BG)
         tree_frame.pack(fill='both', expand=True, padx=8, pady=6)
         
-        cols = ('Date', 'Player', 'Op', 'Item', 'Qty', 'Price')
+        cols = ('Date', 'Player', 'Op', 'Item', 'Qty', 'Price', 'Ref', 'Delta')
         self.search_tree = ttk.Treeview(tree_frame, columns=cols, show='headings')
         
         for col in cols:
@@ -427,6 +431,10 @@ class SuperPyGUI(ctk.CTk):
         self.search_tree.column('Item', width=300)
         self.search_tree.column('Qty', width=50)
         self.search_tree.column('Price', width=80)
+        self.search_tree.column('Ref', width=60)
+        self.search_tree.column('Delta', width=60)
+        self.search_tree.tag_configure('good_deal', background='#C6EFCE')
+        self.search_tree.tag_configure('bad_deal', background='#FFC7CE')
 
         vsb = ttk.Scrollbar(tree_frame, orient="vertical", command=self.search_tree.yview)
         self.search_tree.configure(yscrollcommand=vsb.set)
@@ -462,7 +470,7 @@ class SuperPyGUI(ctk.CTk):
         tree_frame = tk.Frame(f, bg=BG)
         tree_frame.pack(fill='both', expand=True, padx=8, pady=6)
         
-        cols = ('Date', 'Player', 'Op', 'Item', 'Qty', 'Price')
+        cols = ('Date', 'Player', 'Op', 'Item', 'Qty', 'Price', 'Ref', 'Delta')
         self.adv_tree = ttk.Treeview(tree_frame, columns=cols, show='headings')
         
         for col in cols:
@@ -474,6 +482,10 @@ class SuperPyGUI(ctk.CTk):
         self.adv_tree.column('Item', width=300)
         self.adv_tree.column('Qty', width=50)
         self.adv_tree.column('Price', width=80)
+        self.adv_tree.column('Ref', width=60)
+        self.adv_tree.column('Delta', width=60)
+        self.adv_tree.tag_configure('good_deal', background='#C6EFCE')
+        self.adv_tree.tag_configure('bad_deal', background='#FFC7CE')
 
         vsb = ttk.Scrollbar(tree_frame, orient="vertical", command=self.adv_tree.yview)
         self.adv_tree.configure(yscrollcommand=vsb.set)
@@ -916,17 +928,39 @@ Criado por: Jotasiete7 | Versão: 2.0
         self.set_status(f'Resultados: {len(res)} (took {dt:.3f}s)')
         
         for r in res[:2000]:
-            # Map dict keys to columns
-            # Keys might be: 'date', 'player', 'operation', 'main_item', 'main_qty', 'price_s'
+            # Evaluate Deal
+            item_name = r.get('main_item', '')
+            qty = r.get('main_qty', 1)
+            if pd.isna(qty): qty = 1
+            
+            price_val = r.get('price_s')
+            if pd.isna(price_val) or isinstance(price_val, str):
+                 price_val = 0
+            
+            eval_res = self.price_manager.evaluate_trade(str(item_name), price_val, float(qty))
+            
+            rating = eval_res.get('rating', 'UNKNOWN')
+            delta = eval_res.get('delta_percent', 0)
+            ref_price = eval_res.get('reference_unit_price', 0)
+            
+            delta_str = f"{delta:+.0f}%" if rating != 'UNKNOWN' else "-"
+            ref_str = f"{ref_price:.2f}" if ref_price else "-"
+            
+            tag = ''
+            if rating == 'GOOD': tag = 'good_deal'
+            elif rating == 'BAD': tag = 'bad_deal'
+
             vals = (
                 r.get('date', r.get('timestamp', '-')),
                 r.get('player', '-'),
                 r.get('operation', '-'),
                 r.get('main_item', '-'),
                 r.get('main_qty', '-'),
-                r.get('price_s', '-')
+                r.get('price_s', '-'),
+                ref_str,
+                delta_str
             )
-            self.search_tree.insert('', 'end', values=vals)
+            self.search_tree.insert('', 'end', values=vals, tags=(tag,))
 
     def on_advanced_search(self):
         must = self.adv_must.get()
@@ -952,16 +986,39 @@ Criado por: Jotasiete7 | Versão: 2.0
         self.set_status(f'Resultados: {len(res)} (took {dt:.3f}s)')
         
         for r in res:
-             # Map dict keys to columns
+            # Evaluate Deal
+            item_name = r.get('main_item', '')
+            qty = r.get('main_qty', 1)
+            if pd.isna(qty): qty = 1
+            
+            price_val = r.get('price_s')
+            if pd.isna(price_val) or isinstance(price_val, str):
+                 price_val = 0
+            
+            eval_res = self.price_manager.evaluate_trade(str(item_name), price_val, float(qty))
+            
+            rating = eval_res.get('rating', 'UNKNOWN')
+            delta = eval_res.get('delta_percent', 0)
+            ref_price = eval_res.get('reference_unit_price', 0)
+            
+            delta_str = f"{delta:+.0f}%" if rating != 'UNKNOWN' else "-"
+            ref_str = f"{ref_price:.2f}" if ref_price else "-"
+            
+            tag = ''
+            if rating == 'GOOD': tag = 'good_deal'
+            elif rating == 'BAD': tag = 'bad_deal'
+
             vals = (
                 r.get('date', r.get('timestamp', '-')),
                 r.get('player', '-'),
                 r.get('operation', '-'),
                 r.get('main_item', '-'),
                 r.get('main_qty', '-'),
-                r.get('price_s', '-')
+                r.get('price_s', '-'),
+                ref_str,
+                delta_str
             )
-            self.adv_tree.insert('', 'end', values=vals)
+            self.adv_tree.insert('', 'end', values=vals, tags=(tag,))
 
     def on_generate_chart(self):
         item = self.chart_item.get().strip()
