@@ -62,6 +62,7 @@ DEFAULT_DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 PLUGINS_DIR = os.path.join(os.path.dirname(__file__), "plugins")
 EXTERNAL_DIR = os.path.join(os.path.dirname(__file__), "external")
 PRICE_BASE_PATH = os.path.join(EXTERNAL_DIR, "lista preÃ§os fixos outubro 2024.csv")
+APP_VERSION = "2.2.0"
 
 # UI Color Scheme (Lighter for better readability)
 BG = '#F5F5F5'  # Light gray background
