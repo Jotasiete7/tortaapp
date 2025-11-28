@@ -263,22 +263,6 @@ class SuperPyGUI(ctk.CTk):
                             relief='flat', bg=PANEL_BG, font=FONT, command=cmd)
             btn.pack(pady=6, padx=8)
             self.menu_buttons[text] = btn
-        
-        # Logo and version at bottom
-        bottom_frame = tk.Frame(self.left_panel, bg=PANEL_BG)
-        bottom_frame.pack(side='bottom', pady=20)
-        
-        # Torta emoji as logo (since we don't have image file yet)
-        logo_label = tk.Label(bottom_frame, text='🥧', font=('Segoe UI', 48), bg=PANEL_BG)
-        logo_label.pack()
-        
-        app_name = tk.Label(bottom_frame, text='Torta App', font=('Segoe UI', 10, 'bold'), 
-                           bg=PANEL_BG, fg='#888888')
-        app_name.pack()
-        
-        version_label = tk.Label(bottom_frame, text=f'v{APP_VERSION}', font=('Segoe UI', 8), 
-                                bg=PANEL_BG, fg='#666666')
-        version_label.pack()
 
         # dynamic content frames
         self.frames = {}
@@ -321,83 +305,6 @@ class SuperPyGUI(ctk.CTk):
                 self.log_console.tag_config("error", foreground="red")
 
 
-
-    def copy_selected_rows(self, tree_widget):
-        """Copy selected rows from Treeview to clipboard."""
-        try:
-            selection = tree_widget.selection()
-            if not selection:
-                return
-            
-            # Get column names
-            columns = tree_widget['columns']
-            
-            # Build header
-            lines = [f"\t".join(columns)]
-            
-            # Add selected rows
-            for item_id in selection:
-                values = tree_widget.item(item_id)['values']
-                lines.append("\t".join(str(v) for v in values))
-            
-            # Copy to clipboard
-            text = "\n".join(lines)
-            self.clipboard_clear()
-            self.clipboard_append(text)
-            self.set_status(f"Copiado {len(selection)} linha(s)")
-        except Exception as e:
-            self.log_message(f"Erro ao copiar: {e}", is_error=True)
-    
-    def copy_all_rows(self, tree_widget):
-        """Copy all rows from Treeview to clipboard."""
-        try:
-            # Get all items
-            all_items = tree_widget.get_children()
-            if not all_items:
-                return
-            
-            # Get column names
-            columns = tree_widget['columns']
-            
-            # Build header
-            lines = [f"\t".join(columns)]
-            
-            # Add all rows
-            for item_id in all_items:
-                values = tree_widget.item(item_id)['values']
-                lines.append("\t".join(str(v) for v in values))
-            
-            # Copy to clipboard
-            text = "\n".join(lines)
-            self.clipboard_clear()
-            self.clipboard_append(text)
-            self.set_status(f"Copiado {len(all_items)} linha(s)")
-        except Exception as e:
-            self.log_message(f"Erro ao copiar: {e}", is_error=True)
-    
-    def create_tree_context_menu(self, tree_widget):
-        """Create and show context menu for Treeview."""
-        menu = tk.Menu(tree_widget, tearoff=0)
-        menu.add_command(label="Copiar Selecionadas (Ctrl+C)", 
-                        command=lambda: self.copy_selected_rows(tree_widget))
-        menu.add_command(label="Copiar Todas (Ctrl+Shift+C)", 
-                        command=lambda: self.copy_all_rows(tree_widget))
-        menu.add_separator()
-        menu.add_command(label="Selecionar Todas (Ctrl+A)", 
-                        command=lambda: tree_widget.selection_set(tree_widget.get_children()))
-        
-        def show_menu(event):
-            try:
-                menu.tk_popup(event.x_root, event.y_root)
-            finally:
-                menu.grab_release()
-        
-        tree_widget.bind("<Button-3>", show_menu)  # Right-click
-        tree_widget.bind("<Control-c>", lambda e: self.copy_selected_rows(tree_widget))
-        tree_widget.bind("<Control-C>", lambda e: self.copy_all_rows(tree_widget))
-        tree_widget.bind("<Control-a>", lambda e: tree_widget.selection_set(tree_widget.get_children()))
-
-
     # ------------------ build each view ------------------
     def _build_search_frame(self):
         f = self.frames['search']
@@ -433,9 +340,6 @@ class SuperPyGUI(ctk.CTk):
         
         self.search_tree.pack(side='left', fill='both', expand=True)
         vsb.pack(side='right', fill='y')
-        
-        # Add copy functionality
-        self.create_tree_context_menu(self.search_tree)
 
     def _build_advanced_frame(self):
         f = self.frames['advanced']
@@ -480,9 +384,6 @@ class SuperPyGUI(ctk.CTk):
         
         self.adv_tree.pack(side='left', fill='both', expand=True)
         vsb.pack(side='right', fill='y')
-        
-        # Add copy functionality
-        self.create_tree_context_menu(self.adv_tree)
 
     def _build_stats_frame(self):
         f = self.frames['stats']
@@ -634,9 +535,6 @@ class SuperPyGUI(ctk.CTk):
         
         self.insights_tree.pack(side='left', fill='both', expand=True)
         vsb.pack(side='right', fill='y')
-        
-        # Add copy functionality
-        self.create_tree_context_menu(self.insights_tree)
 
     def on_generate_insights(self):
         if not self.engine:
