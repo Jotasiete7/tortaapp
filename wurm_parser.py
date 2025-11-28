@@ -4,6 +4,116 @@ import glob
 import json
 import pickle
 import logging
+import re
+def normalize_price(price_val):
+    """
+    Converte strings de preço (ex: '1g 50s', '1.5k', '100') para valor numérico em Copper.
+    Retorna float ou None se falhar.
+    """
+    if pd.isna(price_val):
+        return None
+        
+    if isinstance(price_val, (int, float)):
+        return float(price_val)
+        
+    s = str(price_val).lower().strip()
+    if not s or s == 'nan':
+        return None
+        
+    # Remove caracteres indesejados
+    s = s.replace(',', '.')
+    
+    try:
+        # Tenta conversão direta primeiro
+        return float(s)
+    except ValueError:
+        pass
+        
+    # Parse complexo (1g 50s 20c)
+    total_copper = 0.0
+    
+    # Regex para extrair partes
+    import re
+    
+    # Se tiver 'k' (1.5k = 1500) - assumindo que k = 1000 unidades base (copper?) ou silver?
+    # No Wurm, k geralmente é usado para quantidade, não preço. Mas se for preço:
+    if 'k' in s:
+        try:
+            val = float(re.sub(r'[^\d.]', '', s))
+            return val * 1000
+        except:
+            pass
+            
+    # Parse g/s/c
+    parts = re.findall(r'([\d.]+)\s*([gsc])', s)
+    if parts:
+        for val, unit in parts:
+            try:
+                v = float(val)
+                if unit == 'g': total_copper += v * 10000
+                elif unit == 's': total_copper += v * 100
+                elif unit == 'c': total_copper += v
+            except:
+                pass
+        return total_copper if total_copper > 0 else None
+        
+    return None
+
+import re
+def normalize_price(price_val):
+    """
+    Converte strings de preço (ex: '1g 50s', '1.5k', '100') para valor numérico em Copper.
+    Retorna float ou None se falhar.
+    """
+    if pd.isna(price_val):
+        return None
+        
+    if isinstance(price_val, (int, float)):
+        return float(price_val)
+        
+    s = str(price_val).lower().strip()
+    if not s or s == 'nan':
+        return None
+        
+    # Remove caracteres indesejados
+    s = s.replace(',', '.')
+    
+    try:
+        # Tenta conversão direta primeiro
+        return float(s)
+    except ValueError:
+        pass
+        
+    # Parse complexo (1g 50s 20c)
+    total_copper = 0.0
+    
+    # Regex para extrair partes
+    import re
+    
+    # Se tiver 'k' (1.5k = 1500) - assumindo que k = 1000 unidades base (copper?) ou silver?
+    # No Wurm, k geralmente é usado para quantidade, não preço. Mas se for preço:
+    if 'k' in s:
+        try:
+            val = float(re.sub(r'[^\d.]', '', s))
+            return val * 1000
+        except:
+            pass
+            
+    # Parse g/s/c
+    parts = re.findall(r'([\d.]+)\s*([gsc])', s)
+    if parts:
+        for val, unit in parts:
+            try:
+                v = float(val)
+                if unit == 'g': total_copper += v * 10000
+                elif unit == 's': total_copper += v * 100
+                elif unit == 'c': total_copper += v
+            except:
+                pass
+        return total_copper if total_copper > 0 else None
+        
+    return None
+
 from pathlib import Path
 
 # Configuração de logging
@@ -120,10 +230,18 @@ def load_data_and_build_cache(data_dir: str, force_rebuild: bool = False, sample
             df_master[col] = pd.to_datetime(df_master[col], errors='coerce')
             
     # Converte numéricos
-    numeric_cols = ['main_qty', 'main_ql', 'main_dmg', 'main_wt', 'price_s']
+    numeric_cols = ['main_qty', 'main_ql', 'main_dmg', 'main_wt']
     for col in numeric_cols:
         if col in df_master.columns:
             df_master[col] = pd.to_numeric(df_master[col], errors='coerce')
+            
+    # Normalização de Preço Especial
+    if 'price_s' in df_master.columns:
+        logger.info("Normalizando preços...")
+        # Aplica a função de normalização
+        df_master['price_s'] = df_master['price_s'].apply(normalize_price)
+        # Agora converte para numérico final
+        df_master['price_s'] = pd.to_numeric(df_master['price_s'], errors='coerce')
 
     # Otimização de tipos (Categorias)
     if 'main_item' in df_master.columns:

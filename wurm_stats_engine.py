@@ -10,6 +10,7 @@ Data: 2025-11-26
 """
 
 import pandas as pd
+import re
 import json
 from pathlib import Path
 from typing import Optional, Union, List, Dict, Any
@@ -22,6 +23,25 @@ logger = logging.getLogger(__name__)
 
 
 class WurmStatsEngine:
+    # 1. CONSTANTE: Lista de Termos de Ruído (Stop Words)
+    NOISE_TERMS = [
+        "You can disable receiving these messages",
+        "View the full Trade Chat Etiquette",
+        "Please PM the person if you",
+        "This is the Trade channel",
+        "Only messages starting with WTB, WTS",
+        "You can also use @<name> to",
+        "common", 
+        "rare",   
+        "null",   
+        "fragment",
+        "casket",
+        "clay",
+    ]
+    # Lista de colunas onde o ruído deve ser verificado
+    COLUMNS_TO_CHECK = ['main_item', 'raw_text', 'description']
+
+
     """
     Motor de estatísticas para análise de dados de trade do Wurm Online.
     
@@ -77,7 +97,62 @@ class WurmStatsEngine:
             logger.info(f"✔ Dados carregados: {len(self.df):,} registros, {len(self.df.columns)} colunas")
         else:
             raise ValueError("É necessário fornecer 'data_path' ou 'df' para inicializar o engine.")
+        
+        # Inicializa cleaned_df
+        self.cleaned_df = self._preprocess_data() if self.df is not None else pd.DataFrame()
     
+
+
+    def _preprocess_data(self) -> pd.DataFrame:
+        """
+        Limpa o DataFrame removendo entradas de chat e ruído em múltiplas colunas.
+        """
+        if self.df is None or self.df.empty:
+            return pd.DataFrame()
+            
+        df = self.df.copy()
+        
+        # 1. Criar a expressão regular de filtro
+        noise_regex = '|'.join(map(re.escape, self.NOISE_TERMS))
+        
+        # 2. Inicializar a máscara de filtro combinada (False = não é ruído)
+        combined_noise_mask = pd.Series([False] * len(df), index=df.index)
+        
+        # 3. Iterar sobre as colunas e construir a máscara de ruído
+        for col in self.COLUMNS_TO_CHECK:
+            if col in df.columns:
+                try:
+                    # Máscara de ruído para a coluna atual: True se a coluna CONTÉM ruído
+                    current_noise_mask = df[col].astype(str).str.contains(
+                        noise_regex, 
+                        case=False, 
+                        na=False, 
+                        regex=True
+                    )
+                    
+                    # Combinar a máscara atual com a máscara combinada usando OR (|)
+                    combined_noise_mask = combined_noise_mask | current_noise_mask
+                except Exception as e:
+                    logger.warning(f"Erro ao filtrar coluna {col}: {e}")
+            else:
+                # logger.debug(f"Coluna '{col}' não encontrada no DataFrame.")
+                pass
+
+        # 4. Aplicar o filtro final
+        # O '~' inverte a máscara: seleciona o que NÃO é ruído.
+        try:
+            final_filter_mask = ~combined_noise_mask
+            df_cleaned = df[final_filter_mask]
+            
+            removed_count = len(df) - len(df_cleaned)
+            if removed_count > 0:
+                logger.info(f"Pré-processamento: {removed_count} linhas de ruído removidas (filtro multicamada).")
+            
+            return df_cleaned
+        except Exception as e:
+            logger.error(f"Erro no pré-processamento final: {e}")
+            return df
+
     def _load_data(self) -> None:
         """
         Carrega os dados usando o wurm_parser com suporte a cache inteligente.
@@ -137,3 +212,66 @@ class WurmStatsEngine:
         """Retorna DataFrame filtrado por nome do item."""
         if self.df is None: return pd.DataFrame()
         return self.df[self.df['main_item'].str.contains(item_name, case=False, na=False)]
+
+    
+    def get_market_summary(self) -> Dict[str, Dict[str, float]]:
+        """
+        Retorna um resumo de mercado para todos os itens.
+        Retorna: {item_name: {'avg_s': float, 'count': int}}
+        """
+        if self.df is None or self.df.empty:
+            return {}
+            
+        # Usa o dataframe limpo se disponível
+        target_df = self.cleaned_df if hasattr(self, 'cleaned_df') and not self.cleaned_df.empty else self.df
+        
+        if 'main_item' not in target_df.columns or 'price_s' not in target_df.columns:
+            return {}
+            
+        # Agrupa por item e calcula média de preço e contagem
+        # Filtra apenas preços > 0 para evitar distorções com doações/erros
+        valid_sales = target_df[target_df['price_s'] > 0]
+        
+        if valid_sales.empty:
+            return {}
+            
+        summary = valid_sales.groupby('main_item', observed=True).agg({
+            'price_s': 'mean',
+            'main_qty': 'count' # Usamos count de linhas como volume de transações
+        }).to_dict('index')
+        
+        # Renomeia chaves para facilitar uso
+        result = {}
+        for item, data in summary.items():
+            result[str(item)] = {
+                'avg_s': data['price_s'],
+                'count': int(data['main_qty'])
+            }
+            
+        return result
+
+    def run_optimized(self) -> str:
+        """
+        Executa uma análise otimizada e retorna um resumo em texto.
+        """
+        if self.df is None or self.df.empty:
+            return "Nenhum dado carregado."
+            
+        stats = self.get_stats()
+        
+        summary = [
+            "=== Estatísticas Gerais ===",
+            f"Total de Registros: {stats.get('total_records', 0):,}",
+            f"Uso de Memória: {stats.get('memory_usage', 0):.2f} MB",
+            f"Período: {stats.get('date_range', ('N/A', 'N/A'))}",
+            "",
+            "=== Top Itens (Volume) ===",
+        ]
+        
+        if 'main_item' in self.df.columns:
+            top_items = self.cleaned_df['main_item'].value_counts().head(10) if hasattr(self, 'cleaned_df') and not self.cleaned_df.empty else self.df['main_item'].value_counts().head(10)
+            for item, count in top_items.items():
+                summary.append(f"{item}: {count:,}")
+                
+        return "\n".join(summary)
+

@@ -1,11 +1,11 @@
 ﻿"""
-SuperPy GUI (Tkinter) â€” minimal-retro modern
+SuperPy GUI (Tkinter) — minimal-retro modern
 
 This is a single-file starter app for your SuperPy windowed tool.
 It:
 - extracts a provided ZIP of your scripts/data (default path set to the uploaded file)
 - loads trade data lines into memory (lazy/indexed)
-- provides a left panel with icons + text menu (Buscar, AvanÃ§ado, EstatÃ­sticas, GrÃ¡ficos, Plugins, Configs)
+- provides a left panel with icons + text menu (Buscar, Avançado, Estatísticas, Gráficos, Plugins, Configs)
 - implements an advanced search UI with "contains" and "not contains" and exact/fuzzy options
 - includes a simple plugin loader that scans ./plugins for .py files and lists them in the UI
 - keeps everything non-blocking (threaded loads) and ready to be extended
@@ -61,8 +61,9 @@ TRADE_ZIP_PATH = r"wurm_trade_master_2025_clean.txt"
 DEFAULT_DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 PLUGINS_DIR = os.path.join(os.path.dirname(__file__), "plugins")
 EXTERNAL_DIR = os.path.join(os.path.dirname(__file__), "external")
-PRICE_BASE_PATH = os.path.join(EXTERNAL_DIR, "lista preÃ§os fixos outubro 2024.csv")
+PRICE_BASE_PATH = os.path.join(EXTERNAL_DIR, "lista preços fixos outubro 2024.csv")
 APP_VERSION = "2.2.0"
+
 
 # UI Color Scheme (Lighter for better readability)
 BG = '#F5F5F5'  # Light gray background
@@ -114,7 +115,7 @@ class TradeData:
 
     def load_from_dir(self, data_dir):
         """Load textual trade data from data_dir. Finds .txt files and loads lines.
-        This is intentionally simple and conservative â€” adapt it to your file format.
+        This is intentionally simple and conservative — adapt it to your file format.
         """
         self.lines = []
         self.loaded_path = data_dir
@@ -222,7 +223,7 @@ class SuperPyGUI(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.async_loader = AsyncDataLoader()
-        self.title('SuperPy â€” Wurm Trade Analyzer')
+        self.title('SuperPy — Wurm Trade Analyzer')
         self.geometry('1000x650')
         self.config(bg=BG)
 
@@ -240,6 +241,42 @@ class SuperPyGUI(ctk.CTk):
         # start background loading of data if possible
         self.after(200, self._background_load)
 
+
+    def copy_selected_rows(self, tree):
+        """Copy selected rows to clipboard (tab-separated)"""
+        selection = tree.selection()
+        if not selection:
+            return
+            
+        lines = []
+        # Get headers
+        headers = [tree.heading(c)['text'] for c in tree['columns']]
+        lines.append('\t'.join(headers))
+        
+        # Get data
+        for item in selection:
+            values = tree.item(item)['values']
+            lines.append('\t'.join(map(str, values)))
+            
+        text_to_copy = '\n'.join(lines)
+        self.clipboard_clear()
+        self.clipboard_append(text_to_copy)
+        self.update() # Required for clipboard to work
+        self.log_message(f"Copied {len(selection)} rows to clipboard")
+
+    def create_tree_context_menu(self, tree):
+        """Create context menu for treeview"""
+        menu = tk.Menu(self, tearoff=0)
+        menu.add_command(label="Copiar", command=lambda: self.copy_selected_rows(tree))
+        
+        def show_menu(event):
+            try:
+                menu.tk_popup(event.x_root, event.y_root)
+            finally:
+                menu.grab_release()
+        
+        tree.bind("<Button-3>", show_menu)
+        tree.bind("<Control-c>", lambda e: self.copy_selected_rows(tree))
     def _build_ui(self):
         # main frames
         self.left_panel = tk.Frame(self, width=180, bg=PANEL_BG)
@@ -254,36 +291,21 @@ class SuperPyGUI(ctk.CTk):
         # left menu with icons + text
         self.menu_buttons = {}
         menu = [
-            ('ðŸ”', 'Buscar', self.show_search),
-            ('ðŸ§­', 'AvanÃ§ado', self.show_advanced),
-            ('ðŸ“Š', 'EstatÃ­sticas', self.show_stats),
-            ('ðŸ“ˆ', 'GrÃ¡ficos', self.show_charts),
-            ('ðŸ”®', 'Insights', self.show_insights),
-            ('ðŸ§©', 'Plugins', self.show_plugins),
-            ('âš™ï¸', 'Config', self.show_config),
-            ('â“', 'Ajuda', self.show_help),
+            ('🔍', 'Buscar', self.show_search),
+            ('🧭', 'Avançado', self.show_advanced),
+            ('📊', 'Estatísticas', self.show_stats),
+            ('📈', 'Gráficos', self.show_charts),
+            ('🔮', 'Insights', self.show_insights),
+            ('💰', 'Price Editor', self.show_price_editor),
+            ('🧩', 'Plugins', self.show_plugins),
+            ('⚙️', 'Config', self.show_config),
+            ('❓', 'Ajuda', self.show_help),
         ]
         for icon, text, cmd in menu:
             btn = tk.Button(self.left_panel, text=f"{icon}  {text}", anchor='w', width=20,
                             relief='flat', bg=PANEL_BG, font=FONT, command=cmd)
             btn.pack(pady=6, padx=8)
             self.menu_buttons[text] = btn
-        
-        # Logo and version at bottom
-        bottom_frame = tk.Frame(self.left_panel, bg=PANEL_BG)
-        bottom_frame.pack(side='bottom', pady=20)
-        
-        # Torta emoji as logo (since we don't have image file yet)
-        logo_label = tk.Label(bottom_frame, text='ðŸ¥§', font=('Segoe UI', 48), bg=PANEL_BG)
-        logo_label.pack()
-        
-        app_name = tk.Label(bottom_frame, text='Torta App', font=('Segoe UI', 10, 'bold'), 
-                           bg=PANEL_BG, fg='#888888')
-        app_name.pack()
-        
-        version_label = tk.Label(bottom_frame, text=f'v{APP_VERSION}', font=('Segoe UI', 8), 
-                                bg=PANEL_BG, fg='#666666')
-        version_label.pack()
 
         # dynamic content frames
         self.frames = {}
@@ -327,83 +349,6 @@ class SuperPyGUI(ctk.CTk):
                 self.log_console.tag_config("error", foreground="red")
 
 
-
-    def copy_selected_rows(self, tree_widget):
-        """Copy selected rows from Treeview to clipboard."""
-        try:
-            selection = tree_widget.selection()
-            if not selection:
-                return
-            
-            # Get column names
-            columns = tree_widget['columns']
-            
-            # Build header
-            lines = [f"\t".join(columns)]
-            
-            # Add selected rows
-            for item_id in selection:
-                values = tree_widget.item(item_id)['values']
-                lines.append("\t".join(str(v) for v in values))
-            
-            # Copy to clipboard
-            text = "\n".join(lines)
-            self.clipboard_clear()
-            self.clipboard_append(text)
-            self.set_status(f"Copiado {len(selection)} linha(s)")
-        except Exception as e:
-            self.log_message(f"Erro ao copiar: {e}", is_error=True)
-    
-    def copy_all_rows(self, tree_widget):
-        """Copy all rows from Treeview to clipboard."""
-        try:
-            # Get all items
-            all_items = tree_widget.get_children()
-            if not all_items:
-                return
-            
-            # Get column names
-            columns = tree_widget['columns']
-            
-            # Build header
-            lines = [f"\t".join(columns)]
-            
-            # Add all rows
-            for item_id in all_items:
-                values = tree_widget.item(item_id)['values']
-                lines.append("\t".join(str(v) for v in values))
-            
-            # Copy to clipboard
-            text = "\n".join(lines)
-            self.clipboard_clear()
-            self.clipboard_append(text)
-            self.set_status(f"Copiado {len(all_items)} linha(s)")
-        except Exception as e:
-            self.log_message(f"Erro ao copiar: {e}", is_error=True)
-    
-    def create_tree_context_menu(self, tree_widget):
-        """Create and show context menu for Treeview."""
-        menu = tk.Menu(tree_widget, tearoff=0)
-        menu.add_command(label="Copiar Selecionadas (Ctrl+C)", 
-                        command=lambda: self.copy_selected_rows(tree_widget))
-        menu.add_command(label="Copiar Todas (Ctrl+Shift+C)", 
-                        command=lambda: self.copy_all_rows(tree_widget))
-        menu.add_separator()
-        menu.add_command(label="Selecionar Todas (Ctrl+A)", 
-                        command=lambda: tree_widget.selection_set(tree_widget.get_children()))
-        
-        def show_menu(event):
-            try:
-                menu.tk_popup(event.x_root, event.y_root)
-            finally:
-                menu.grab_release()
-        
-        tree_widget.bind("<Button-3>", show_menu)  # Right-click
-        tree_widget.bind("<Control-c>", lambda e: self.copy_selected_rows(tree_widget))
-        tree_widget.bind("<Control-C>", lambda e: self.copy_all_rows(tree_widget))
-        tree_widget.bind("<Control-a>", lambda e: tree_widget.selection_set(tree_widget.get_children()))
-
-
     # ------------------ build each view ------------------
     def _build_search_frame(self):
         f = self.frames['search']
@@ -421,7 +366,7 @@ class SuperPyGUI(ctk.CTk):
         tree_frame = tk.Frame(f, bg=BG)
         tree_frame.pack(fill='both', expand=True, padx=8, pady=6)
         
-        cols = ('Date', 'Player', 'Op', 'Item', 'Qty', 'Price', 'Ref', 'Delta')
+        cols = ('Date', 'Player', 'Op', 'Item', 'Qty', 'Price')
         self.search_tree = ttk.Treeview(tree_frame, columns=cols, show='headings')
         
         for col in cols:
@@ -433,19 +378,13 @@ class SuperPyGUI(ctk.CTk):
         self.search_tree.column('Item', width=300)
         self.search_tree.column('Qty', width=50)
         self.search_tree.column('Price', width=80)
-        self.search_tree.column('Ref', width=60)
-        self.search_tree.column('Delta', width=60)
-        self.search_tree.tag_configure('good_deal', background='#C6EFCE')
-        self.search_tree.tag_configure('bad_deal', background='#FFC7CE')
 
         vsb = ttk.Scrollbar(tree_frame, orient="vertical", command=self.search_tree.yview)
         self.search_tree.configure(yscrollcommand=vsb.set)
         
         self.search_tree.pack(side='left', fill='both', expand=True)
-        vsb.pack(side='right', fill='y')
-        
-        # Add copy functionality
         self.create_tree_context_menu(self.search_tree)
+        vsb.pack(side='right', fill='y')
 
     def _build_advanced_frame(self):
         f = self.frames['advanced']
@@ -453,26 +392,26 @@ class SuperPyGUI(ctk.CTk):
         pnl.pack(fill='x', pady=8)
 
         # grid of inputs
-        tk.Label(pnl, text='ContÃ©m (obrigatÃ³rio):', bg=BG, font=FONT).grid(row=0, column=0, sticky='e', padx=6, pady=4)
+        tk.Label(pnl, text='Contém (obrigatório):', bg=BG, font=FONT).grid(row=0, column=0, sticky='e', padx=6, pady=4)
         self.adv_must = tk.Entry(pnl, font=FONT, width=40)
         self.adv_must.grid(row=0, column=1, sticky='w')
 
-        tk.Label(pnl, text='NÃ£o contÃ©m (opcional):', bg=BG, font=FONT).grid(row=1, column=0, sticky='e', padx=6, pady=4)
+        tk.Label(pnl, text='Não contém (opcional):', bg=BG, font=FONT).grid(row=1, column=0, sticky='e', padx=6, pady=4)
         self.adv_not = tk.Entry(pnl, font=FONT, width=40)
         self.adv_not.grid(row=1, column=1, sticky='w')
 
         self.exact_var = tk.BooleanVar(value=False)
-        tk.Checkbutton(pnl, text='CombinaÃ§Ã£o exata', variable=self.exact_var, bg=BG).grid(row=2, column=0, sticky='w', padx=6)
+        tk.Checkbutton(pnl, text='Combinação exata', variable=self.exact_var, bg=BG).grid(row=2, column=0, sticky='w', padx=6)
         self.case_var = tk.BooleanVar(value=False)
         tk.Checkbutton(pnl, text='Case-sensitive', variable=self.case_var, bg=BG).grid(row=2, column=1, sticky='w')
 
-        tk.Button(pnl, text='Buscar AvanÃ§ado', command=self.on_advanced_search, font=FONT).grid(row=3, column=0, columnspan=2, pady=8)
+        tk.Button(pnl, text='Buscar Avançado', command=self.on_advanced_search, font=FONT).grid(row=3, column=0, columnspan=2, pady=8)
 
         # results (Treeview)
         tree_frame = tk.Frame(f, bg=BG)
         tree_frame.pack(fill='both', expand=True, padx=8, pady=6)
         
-        cols = ('Date', 'Player', 'Op', 'Item', 'Qty', 'Price', 'Ref', 'Delta')
+        cols = ('Date', 'Player', 'Op', 'Item', 'Qty', 'Price')
         self.adv_tree = ttk.Treeview(tree_frame, columns=cols, show='headings')
         
         for col in cols:
@@ -484,19 +423,13 @@ class SuperPyGUI(ctk.CTk):
         self.adv_tree.column('Item', width=300)
         self.adv_tree.column('Qty', width=50)
         self.adv_tree.column('Price', width=80)
-        self.adv_tree.column('Ref', width=60)
-        self.adv_tree.column('Delta', width=60)
-        self.adv_tree.tag_configure('good_deal', background='#C6EFCE')
-        self.adv_tree.tag_configure('bad_deal', background='#FFC7CE')
 
         vsb = ttk.Scrollbar(tree_frame, orient="vertical", command=self.adv_tree.yview)
         self.adv_tree.configure(yscrollcommand=vsb.set)
         
         self.adv_tree.pack(side='left', fill='both', expand=True)
-        vsb.pack(side='right', fill='y')
-        
-        # Add copy functionality
         self.create_tree_context_menu(self.adv_tree)
+        vsb.pack(side='right', fill='y')
 
     def _build_stats_frame(self):
         f = self.frames['stats']
@@ -504,7 +437,7 @@ class SuperPyGUI(ctk.CTk):
         # Toolbar
         top = tk.Frame(f, bg=BG)
         top.pack(fill='x', pady=8)
-        tk.Button(top, text='Atualizar EstatÃ­sticas', command=self.on_generate_stats).pack(side='left', padx=8)
+        tk.Button(top, text='Atualizar Estatísticas', command=self.on_generate_stats).pack(side='left', padx=8)
         tk.Button(top, text='Exportar CSV', command=self.export_stats).pack(side='left', padx=8)
 
         # Split view: Text summary on top, Treeview on bottom
@@ -518,7 +451,7 @@ class SuperPyGUI(ctk.CTk):
         tree_frame = tk.Frame(paned)
         self.stats_tree = ttk.Treeview(tree_frame, columns=('Item', 'Count'), show='headings')
         self.stats_tree.heading('Item', text='Item')
-        self.stats_tree.heading('Count', text='TransaÃ§Ãµes')
+        self.stats_tree.heading('Count', text='Transações')
         self.stats_tree.column('Item', width=300)
         self.stats_tree.column('Count', width=100)
         
@@ -532,11 +465,11 @@ class SuperPyGUI(ctk.CTk):
 
     def on_generate_stats(self):
         if not self.engine:
-            self.log_message('Engine nÃ£o carregado. Carregue os dados primeiro.', is_error=True)
+            self.log_message('Engine não carregado. Carregue os dados primeiro.', is_error=True)
             return
             
-        self.log_message('Gerando estatÃ­sticas otimizadas (Async)...')
-        self.set_status("Calculando EstatÃ­sticas...")
+        self.log_message('Gerando estatísticas otimizadas (Async)...')
+        self.set_status("Calculando Estatísticas...")
         
         self.stats_text.delete('1.0', tk.END)
         # Clear tree
@@ -558,11 +491,11 @@ class SuperPyGUI(ctk.CTk):
                 for item, count in top_items.items():
                     self.stats_tree.insert('', 'end', values=(str(item), int(count)))
             
-            self.log_message('EstatÃ­sticas geradas com sucesso.')
+            self.log_message('Estatísticas geradas com sucesso.')
             self.set_status("Pronto")
             
         def on_error(e):
-            self.log_message(f'Erro ao gerar estatÃ­sticas: {e}', is_error=True)
+            self.log_message(f'Erro ao gerar estatísticas: {e}', is_error=True)
             self.set_status("Erro Stats")
             
         checker = self.async_loader.load_async(run_stats, on_success, on_error)
@@ -593,8 +526,8 @@ class SuperPyGUI(ctk.CTk):
         self.chart_type = tk.StringVar(value="Price History")
         tk.OptionMenu(controls, self.chart_type, "Price History", "Volume/Activity").pack(side='left', padx=6)
         
-        tk.Button(controls, text='Gerar GrÃ¡fico', command=self.on_generate_chart, font=FONT, bg=ACCENT, fg='white').pack(side='left', padx=6)
-        tk.Button(controls, text='Salvar GrÃ¡fico', command=self.on_save_chart, font=FONT).pack(side='left', padx=6)
+        tk.Button(controls, text='Gerar Gráfico', command=self.on_generate_chart, font=FONT, bg=ACCENT, fg='white').pack(side='left', padx=6)
+        tk.Button(controls, text='Salvar Gráfico', command=self.on_save_chart, font=FONT).pack(side='left', padx=6)
         
         # Chart area
         self.chart_frame = tk.Frame(f, bg='white')
@@ -622,7 +555,7 @@ class SuperPyGUI(ctk.CTk):
                  font=FONT, bg=ACCENT, fg='white').pack(side='right', padx=8)
 
         # Description
-        desc = tk.Label(f, text='AnÃ¡lise avanÃ§ada: Arbitragem (WTS vs WTB), RelevÃ¢ncia (scoring contextual), TendÃªncias (ALTA/BAIXA/ESTÃVEL).', 
+        desc = tk.Label(f, text='Análise avançada: Arbitragem (WTS vs WTB), Relevância (scoring contextual), Tendências (ALTA/BAIXA/ESTÁVEL).', 
                         bg=BG, fg='#aaaaaa', font=("Segoe UI", 9))
         desc.pack(fill='x', padx=8, pady=(0, 8))
 
@@ -630,15 +563,15 @@ class SuperPyGUI(ctk.CTk):
         tree_frame = tk.Frame(f, bg=BG)
         tree_frame.pack(fill='both', expand=True, padx=8, pady=8)
         
-        self.insights_tree = ttk.Treeview(tree_frame, columns=('Item', 'PreÃ§o', 'Tipo', 'Detalhe', 'Score'), show='headings')
+        self.insights_tree = ttk.Treeview(tree_frame, columns=('Item', 'Preço', 'Tipo', 'Detalhe', 'Score'), show='headings')
         self.insights_tree.heading('Item', text='Item')
-        self.insights_tree.heading('PreÃ§o', text='PreÃ§o')
+        self.insights_tree.heading('Preço', text='Preço')
         self.insights_tree.heading('Tipo', text='Tipo')
         self.insights_tree.heading('Detalhe', text='Detalhe')
         self.insights_tree.heading('Score', text='Score')
         
         self.insights_tree.column('Item', width=150)
-        self.insights_tree.column('PreÃ§o', width=120)
+        self.insights_tree.column('Preço', width=120)
         self.insights_tree.column('Tipo', width=120)
         self.insights_tree.column('Detalhe', width=350)
         self.insights_tree.column('Score', width=60)
@@ -648,18 +581,15 @@ class SuperPyGUI(ctk.CTk):
         
         self.insights_tree.pack(side='left', fill='both', expand=True)
         vsb.pack(side='right', fill='y')
-        
-        # Add copy functionality
-        self.create_tree_context_menu(self.insights_tree)
 
     def on_generate_insights(self):
         if not self.engine:
-            messagebox.showerror('Erro', 'Dados nÃ£o carregados.')
+            messagebox.showerror('Erro', 'Dados não carregados.')
             return
         
         analysis_type = self.analysis_type.get() if hasattr(self, 'analysis_type') else 'all'
         
-        self.log_message(f'Iniciando anÃ¡lise preditiva ({analysis_type})...')
+        self.log_message(f'Iniciando análise preditiva ({analysis_type})...')
         self.set_status("Processando ML...")
         
         # Clear tree
@@ -671,7 +601,7 @@ class SuperPyGUI(ctk.CTk):
             return self.ml_predictor.run_prediction(self.engine.df, analysis_type=analysis_type)
             
         def on_success(results):
-            self.log_message(f'AnÃ¡lise concluÃ­da. {len(results)} insights gerados.')
+            self.log_message(f'Análise concluída. {len(results)} insights gerados.')
             self.set_status("Pronto")
             
             for res in results:
@@ -681,14 +611,14 @@ class SuperPyGUI(ctk.CTk):
                 else:
                     self.insights_tree.insert('', 'end', values=(
                         res.get('Item', '?'),
-                        res.get('PreÃ§o', '?'),
+                        res.get('Preço', '?'),
                         res.get('Tipo', '?'),
                         res.get('Detalhe', '?'),
                         res.get('Score', '?')
                     ))
                     
         def on_error(e):
-            self.log_message(f'Erro na anÃ¡lise ML: {e}', is_error=True)
+            self.log_message(f'Erro na análise ML: {e}', is_error=True)
             self.set_status("Erro ML")
             
         checker = self.async_loader.load_async(run_ml, on_success, on_error)
@@ -736,6 +666,7 @@ class SuperPyGUI(ctk.CTk):
         self.price_tree.configure(yscrollcommand=vsb.set)
         
         self.price_tree.pack(side='left', fill='both', expand=True)
+        self.create_tree_context_menu(self.price_tree)
         vsb.pack(side='right', fill='y')
         
         # Bind double-click to edit
@@ -830,7 +761,7 @@ class SuperPyGUI(ctk.CTk):
     def _build_help_frame(self):
         f = self.frames['help']
         
-        tk.Label(f, text='ðŸ“š Ajuda / Tutorial', bg=BG, fg=TEXT, font=("Segoe UI", 16, "bold")).pack(pady=12)
+        tk.Label(f, text='📚 Ajuda / Tutorial', bg=BG, fg=TEXT, font=("Segoe UI", 16, "bold")).pack(pady=12)
         
         help_text = ScrolledText(f, height=30, font=("Segolas UI", 10), wrap='word', bg='#1e1e1e', fg='#d4d4d4')
         help_text.pack(fill='both', expand=True, padx=12, pady=8)
@@ -840,58 +771,58 @@ class SuperPyGUI(ctk.CTk):
 
 Este aplicativo analisa dados de trade do Wurm Online usando Pandas.
 
-ðŸ“Œ COMO CARREGAR DADOS:
-1. VÃ¡ na aba "Config"
+📌 COMO CARREGAR DADOS:
+1. Vá na aba "Config"
 2. Clique em "Selecionar" para escolher o arquivo de dados
 3. Clique em "Aplicar e recarregar"
 4. Aguarde a mensagem "Dados carregados" no Console de Log
 
-ðŸ” BUSCAR:
+🔍 BUSCAR:
 - Digite o nome do item (ex: "iron", "log")
-- A busca Ã© case-insensitive e busca parcialmente
+- A busca é case-insensitive e busca parcialmente
 - Resultados aparecem no painel abaixo
 
-ðŸ§­ BUSCA AVANÃ‡ADA:
-- "ContÃ©m": termos obrigatÃ³rios (separados por espaÃ§o)
-- "NÃ£o contÃ©m": termos a excluir
-- OpÃ§Ãµes: CombinaÃ§Ã£o exata / Case-sensitive
+🧭 BUSCA AVANÇADA:
+- "Contém": termos obrigatórios (separados por espaço)
+- "Não contém": termos a excluir
+- Opções: Combinação exata / Case-sensitive
 
-ðŸ“ŠESTATÃSTICAS:
+📊ESTATÍSTICAS:
 - Mostra resumo dos dados carregados
 - Top 50 itens mais negociados
-- Clique em "Atualizar EstatÃ­sticas" para refresh
+- Clique em "Atualizar Estatísticas" para refresh
 - Clique em "Exportar CSV" para salvar dados
 
-ðŸ“ˆ GRÃFICOS:
+📈 GRÁFICOS:
 - Digite o nome do item
 - Escolha tipo: "Price History" ou "Volume/Activity"
-- Clique em "Gerar GrÃ¡fico"
-- O grÃ¡fico aparece embed na janela
+- Clique em "Gerar Gráfico"
+- O gráfico aparece embed na janela
 - Use zoom/pan do matplotlib para navegar
 
-ðŸ§© PLUGINS:
+🧩 PLUGINS:
 - Coloque arquivos .py na pasta "plugins"
 - Clique em "Recarregar plugins" para atualizar lista
 - Selecione um plugin e clique em "Executar plugin"
 
-âš™ï¸ CONFIG:
+⚙️ CONFIG:
 - Configure o caminho dos dados
 - Veja o Console de Log para mensagens do sistema
 - Erros aparecem em vermelho no console
 
-ðŸ’¡ DICAS:
+💡 DICAS:
 - O app usa tema escuro (CustomTkinter)
-- Carregamento Ã© assÃ­ncrono (nÃ£o trava)
-- Console de Log mostra timestamp de todas operaÃ§Ãµes
-- Encoding: latin-1 (compatÃ­vel com logs do Wurm)
+- Carregamento é assíncrono (não trava)
+- Console de Log mostra timestamp de todas operações
+- Encoding: latin-1 (compatível com logs do Wurm)
 
-ðŸš€ ANÃLISE AVANÃ‡ADA (APIs):
+🚀 ANÁLISE AVANÇADA (APIs):
 - engine.calculate_volatility(item, window=7)
 - engine.calculate_mean_average(item, window=7)
-- engine.otimizar_dataframe() - reduz uso de memÃ³ria
+- engine.otimizar_dataframe() - reduz uso de memória
 
 ===================================================
-Criado por: Jotasiete7 | VersÃ£o: 2.0
+Criado por: Jotasiete7 | Versão: 2.0
 ===================================================
         """
         
@@ -904,7 +835,7 @@ Criado por: Jotasiete7 | VersÃ£o: 2.0
 
     def _build_config_frame(self):
         f = self.frames['config']
-        tk.Label(f, text='ConfiguraÃ§Ãµes', bg=BG, font=("Segoe UI", 12)).pack(pady=8)
+        tk.Label(f, text='Configurações', bg=BG, font=("Segoe UI", 12)).pack(pady=8)
         cfg = tk.Frame(f, bg=BG)
         cfg.pack(pady=4)
 
@@ -915,7 +846,7 @@ Criado por: Jotasiete7 | VersÃ£o: 2.0
         tk.Button(cfg, text='Selecionar', command=self.select_data_file).grid(row=0, column=2, padx=6)
 
         self.cache_var = tk.BooleanVar(value=True)
-        tk.Checkbutton(cfg, text='Usar cache (nÃ£o recarregar automaticamente)', variable=self.cache_var, bg=BG).grid(row=1, column=0, columnspan=3, sticky='w', pady=8)
+        tk.Checkbutton(cfg, text='Usar cache (não recarregar automaticamente)', variable=self.cache_var, bg=BG).grid(row=1, column=0, columnspan=3, sticky='w', pady=8)
 
         tk.Button(cfg, text='Aplicar e recarregar', command=self.apply_config).grid(row=2, column=0, columnspan=3, pady=6)
         
@@ -950,7 +881,7 @@ Criado por: Jotasiete7 | VersÃ£o: 2.0
             try:
                 self.refresh_stats()
             except Exception as e:
-                self.log_message(f'Erro ao atualizar estatÃ­sticas: {e}', is_error=True)
+                self.log_message(f'Erro ao atualizar estatísticas: {e}', is_error=True)
 
     def show_charts(self):
         self._hide_all_frames()
@@ -985,7 +916,7 @@ Criado por: Jotasiete7 | VersÃ£o: 2.0
         def load_job():
             extracted = ensure_data_extracted(path, DEFAULT_DATA_DIR)
             if not extracted:
-                raise FileNotFoundError("Nenhum dado encontrado ou falha na extraÃ§Ã£o.")
+                raise FileNotFoundError("Nenhum dado encontrado ou falha na extração.")
             
             # Determine target file
             data_path = path
@@ -1032,7 +963,7 @@ Criado por: Jotasiete7 | VersÃ£o: 2.0
             messagebox.showinfo('Buscar', 'Digite algo para buscar')
             return
         if not self.engine:
-            messagebox.showerror('Erro', 'Dados nÃ£o carregados')
+            messagebox.showerror('Erro', 'Dados não carregados')
             return
             
         t0 = time.time()
@@ -1053,39 +984,17 @@ Criado por: Jotasiete7 | VersÃ£o: 2.0
         self.set_status(f'Resultados: {len(res)} (took {dt:.3f}s)')
         
         for r in res[:2000]:
-            # Evaluate Deal
-            item_name = r.get('main_item', '')
-            qty = r.get('main_qty', 1)
-            if pd.isna(qty): qty = 1
-            
-            price_val = r.get('price_s')
-            if pd.isna(price_val) or isinstance(price_val, str):
-                 price_val = 0
-            
-            eval_res = self.price_manager.evaluate_trade(str(item_name), price_val, float(qty))
-            
-            rating = eval_res.get('rating', 'UNKNOWN')
-            delta = eval_res.get('delta_percent', 0)
-            ref_price = eval_res.get('reference_unit_price', 0)
-            
-            delta_str = f"{delta:+.0f}%" if rating != 'UNKNOWN' else "-"
-            ref_str = f"{ref_price:.2f}" if ref_price else "-"
-            
-            tag = ''
-            if rating == 'GOOD': tag = 'good_deal'
-            elif rating == 'BAD': tag = 'bad_deal'
-
+            # Map dict keys to columns
+            # Keys might be: 'date', 'player', 'operation', 'main_item', 'main_qty', 'price_s'
             vals = (
                 r.get('date', r.get('timestamp', '-')),
                 r.get('player', '-'),
                 r.get('operation', '-'),
                 r.get('main_item', '-'),
                 r.get('main_qty', '-'),
-                r.get('price_s', '-'),
-                ref_str,
-                delta_str
+                r.get('price_s', '-')
             )
-            self.search_tree.insert('', 'end', values=vals, tags=(tag,))
+            self.search_tree.insert('', 'end', values=vals)
 
     def on_advanced_search(self):
         must = self.adv_must.get()
@@ -1111,46 +1020,23 @@ Criado por: Jotasiete7 | VersÃ£o: 2.0
         self.set_status(f'Resultados: {len(res)} (took {dt:.3f}s)')
         
         for r in res:
-            # Evaluate Deal
-            item_name = r.get('main_item', '')
-            qty = r.get('main_qty', 1)
-            if pd.isna(qty): qty = 1
-            
-            price_val = r.get('price_s')
-            if pd.isna(price_val) or isinstance(price_val, str):
-                 price_val = 0
-            
-            eval_res = self.price_manager.evaluate_trade(str(item_name), price_val, float(qty))
-            
-            rating = eval_res.get('rating', 'UNKNOWN')
-            delta = eval_res.get('delta_percent', 0)
-            ref_price = eval_res.get('reference_unit_price', 0)
-            
-            delta_str = f"{delta:+.0f}%" if rating != 'UNKNOWN' else "-"
-            ref_str = f"{ref_price:.2f}" if ref_price else "-"
-            
-            tag = ''
-            if rating == 'GOOD': tag = 'good_deal'
-            elif rating == 'BAD': tag = 'bad_deal'
-
+             # Map dict keys to columns
             vals = (
                 r.get('date', r.get('timestamp', '-')),
                 r.get('player', '-'),
                 r.get('operation', '-'),
                 r.get('main_item', '-'),
                 r.get('main_qty', '-'),
-                r.get('price_s', '-'),
-                ref_str,
-                delta_str
+                r.get('price_s', '-')
             )
-            self.adv_tree.insert('', 'end', values=vals, tags=(tag,))
+            self.adv_tree.insert('', 'end', values=vals)
 
     def on_generate_chart(self):
         item = self.chart_item.get().strip()
         ctype = self.chart_type.get()
         
         if not self.engine:
-            messagebox.showerror('Erro', 'Dados nÃ£o carregados')
+            messagebox.showerror('Erro', 'Dados não carregados')
             return
 
         # Clear previous
@@ -1160,7 +1046,7 @@ Criado por: Jotasiete7 | VersÃ£o: 2.0
         try:
             if ctype == "Price History":
                 if not item:
-                    messagebox.showinfo('Aviso', 'Digite o nome do item para histÃ³rico de preÃ§os.')
+                    messagebox.showinfo('Aviso', 'Digite o nome do item para histórico de preços.')
                     return
                 
                 fig = self.charts_engine.create_price_trend_chart(self.engine.df, item)
@@ -1177,16 +1063,16 @@ Criado por: Jotasiete7 | VersÃ£o: 2.0
             self.canvas.draw()
             self.canvas.get_tk_widget().pack(side='top', fill='both', expand=True)
             
-            self.log_message(f'GrÃ¡fico gerado: {ctype} - {item}')
+            self.log_message(f'Gráfico gerado: {ctype} - {item}')
 
         except Exception as e:
-            messagebox.showerror('Erro', f'Erro ao gerar grÃ¡fico: {e}')
-            self.log_message(f'Erro ao gerar grÃ¡fico: {e}', is_error=True)
+            messagebox.showerror('Erro', f'Erro ao gerar gráfico: {e}')
+            self.log_message(f'Erro ao gerar gráfico: {e}', is_error=True)
     
     def on_save_chart(self):
-        """Salva o grÃ¡fico atual em arquivo."""
+        """Salva o gráfico atual em arquivo."""
         if self.charts_engine.current_figure is None:
-            messagebox.showinfo('Aviso', 'Gere um grÃ¡fico primeiro.')
+            messagebox.showinfo('Aviso', 'Gere um gráfico primeiro.')
             return
         
         filepath = filedialog.asksaveasfilename(
@@ -1197,11 +1083,11 @@ Criado por: Jotasiete7 | VersÃ£o: 2.0
         if filepath:
             try:
                 self.charts_engine.save_chart(filepath)
-                messagebox.showinfo('Sucesso', f'GrÃ¡fico salvo em:\n{filepath}')
-                self.log_message(f'GrÃ¡fico salvo: {filepath}')
+                messagebox.showinfo('Sucesso', f'Gráfico salvo em:\n{filepath}')
+                self.log_message(f'Gráfico salvo: {filepath}')
             except Exception as e:
                 messagebox.showerror('Erro', f'Erro ao salvar: {e}')
-                self.log_message(f'Erro ao salvar grÃ¡fico: {e}', is_error=True)
+                self.log_message(f'Erro ao salvar gráfico: {e}', is_error=True)
 
     # ------------------ plugins ------------------
     def reload_plugins(self):
@@ -1245,7 +1131,7 @@ Criado por: Jotasiete7 | VersÃ£o: 2.0
             elif hasattr(mod, 'main'):
                 result = mod.main(self.engine)
             else:
-                result = 'Plugin nÃ£o define run(data, params)'
+                result = 'Plugin não define run(data, params)'
             self.plugin_output.insert(tk.END, f'--- {name} output ---\n')
             if isinstance(result, (list, tuple)):
                 for r in result:
@@ -1289,4 +1175,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
