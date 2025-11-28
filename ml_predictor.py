@@ -1,4 +1,4 @@
-# ml_predictor.py
+﻿# ml_predictor.py
 # Módulo de Preparação e Previsão de Machine Learning
 # Responsável por:
 # 1. Receber o DataFrame limpo do StatisticsEngine.
@@ -93,7 +93,8 @@ class MLPredictor:
 
         return [{"insight": "Coluna de preço não encontrada após pré-processamento."}]
 
-    def run_prediction(self, df_clean: pd.DataFrame) -> list:
+    def run_prediction(self, df_clean: pd.DataFrame, analysis_type: str = 'all') -> list:
         """ Executa o pipeline completo: pré-processamento e previsão. """
         df_ml_ready = self.preprocess_for_ml(df_clean)
         return self.predict_opportunities(df_ml_ready)
+
