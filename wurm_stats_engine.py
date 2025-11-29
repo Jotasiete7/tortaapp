@@ -10,7 +10,6 @@ Data: 2025-11-26
 """
 
 import pandas as pd
-import re
 import json
 from pathlib import Path
 from typing import Optional, Union, List, Dict, Any
@@ -23,25 +22,6 @@ logger = logging.getLogger(__name__)
 
 
 class WurmStatsEngine:
-    # 1. CONSTANTE: Lista de Termos de Ruído (Stop Words)
-    NOISE_TERMS = [
-        "You can disable receiving these messages",
-        "View the full Trade Chat Etiquette",
-        "Please PM the person if you",
-        "This is the Trade channel",
-        "Only messages starting with WTB, WTS",
-        "You can also use @<name> to",
-        "common", 
-        "rare",   
-        "null",   
-        "fragment",
-        "casket",
-        "clay",
-    ]
-    # Lista de colunas onde o ruído deve ser verificado
-    COLUMNS_TO_CHECK = ['main_item', 'raw_text', 'description']
-
-
     """
     Motor de estatísticas para análise de dados de trade do Wurm Online.
     
@@ -97,62 +77,7 @@ class WurmStatsEngine:
             logger.info(f"✔ Dados carregados: {len(self.df):,} registros, {len(self.df.columns)} colunas")
         else:
             raise ValueError("É necessário fornecer 'data_path' ou 'df' para inicializar o engine.")
-        
-        # Inicializa cleaned_df
-        self.cleaned_df = self._preprocess_data() if self.df is not None else pd.DataFrame()
     
-
-
-    def _preprocess_data(self) -> pd.DataFrame:
-        """
-        Limpa o DataFrame removendo entradas de chat e ruído em múltiplas colunas.
-        """
-        if self.df is None or self.df.empty:
-            return pd.DataFrame()
-            
-        df = self.df.copy()
-        
-        # 1. Criar a expressão regular de filtro
-        noise_regex = '|'.join(map(re.escape, self.NOISE_TERMS))
-        
-        # 2. Inicializar a máscara de filtro combinada (False = não é ruído)
-        combined_noise_mask = pd.Series([False] * len(df), index=df.index)
-        
-        # 3. Iterar sobre as colunas e construir a máscara de ruído
-        for col in self.COLUMNS_TO_CHECK:
-            if col in df.columns:
-                try:
-                    # Máscara de ruído para a coluna atual: True se a coluna CONTÉM ruído
-                    current_noise_mask = df[col].astype(str).str.contains(
-                        noise_regex, 
-                        case=False, 
-                        na=False, 
-                        regex=True
-                    )
-                    
-                    # Combinar a máscara atual com a máscara combinada usando OR (|)
-                    combined_noise_mask = combined_noise_mask | current_noise_mask
-                except Exception as e:
-                    logger.warning(f"Erro ao filtrar coluna {col}: {e}")
-            else:
-                # logger.debug(f"Coluna '{col}' não encontrada no DataFrame.")
-                pass
-
-        # 4. Aplicar o filtro final
-        # O '~' inverte a máscara: seleciona o que NÃO é ruído.
-        try:
-            final_filter_mask = ~combined_noise_mask
-            df_cleaned = df[final_filter_mask]
-            
-            removed_count = len(df) - len(df_cleaned)
-            if removed_count > 0:
-                logger.info(f"Pré-processamento: {removed_count} linhas de ruído removidas (filtro multicamada).")
-            
-            return df_cleaned
-        except Exception as e:
-            logger.error(f"Erro no pré-processamento final: {e}")
-            return df
-
     def _load_data(self) -> None:
         """
         Carrega os dados usando o wurm_parser com suporte a cache inteligente.
@@ -208,70 +133,104 @@ class WurmStatsEngine:
         """Retorna estatísticas gerais do dataset."""
         return self.metadata
 
-    def filter_by_item(self, item_name: str) -> pd.DataFrame:
+    def filter_by_item(self, item_name: str, exact: bool = False) -> pd.DataFrame:
         """Retorna DataFrame filtrado por nome do item."""
         if self.df is None: return pd.DataFrame()
+        if exact:
+            return self.df[self.df['main_item'].str.fullmatch(item_name, case=False, na=False)]
         return self.df[self.df['main_item'].str.contains(item_name, case=False, na=False)]
 
-    
-    def get_market_summary(self) -> Dict[str, Dict[str, float]]:
+    def calculate_volatility(self, item_name: str, window: int = 7) -> pd.DataFrame:
+        """Calcula a volatilidade (desvio padrão) do preço."""
+        df_item = self.filter_by_item(item_name)
+        if df_item.empty or 'price_s' not in df_item.columns:
+            return pd.DataFrame()
+        
+        # Group by date and take mean price
+        daily_price = df_item.groupby('date')['price_s'].mean()
+        volatility = daily_price.rolling(window=window).std()
+        return volatility.reset_index(name='volatility')
+
+    def calculate_mean_average(self, item_name: str, window: int = 7) -> pd.DataFrame:
+        """Calcula a média móvel do preço."""
+        df_item = self.filter_by_item(item_name)
+        if df_item.empty or 'price_s' not in df_item.columns:
+            return pd.DataFrame()
+            
+        daily_price = df_item.groupby('date')['price_s'].mean()
+        ma = daily_price.rolling(window=window).mean()
+        return ma.reset_index(name='moving_average')
+
+    def calculate_profit_margins(self, item_name: str) -> pd.DataFrame:
         """
-        Retorna um resumo de mercado para todos os itens.
-        Retorna: {item_name: {'avg_s': float, 'count': int}}
+        Calcula margens de lucro (WTS - WTB) para um item.
         """
-        if self.df is None or self.df.empty:
-            return {}
-            
-        # Usa o dataframe limpo se disponível
-        target_df = self.cleaned_df if hasattr(self, 'cleaned_df') and not self.cleaned_df.empty else self.df
+        df_item = self.filter_by_item(item_name, exact=False)
         
-        if 'main_item' not in target_df.columns or 'price_s' not in target_df.columns:
-            return {}
+        if 'operation' not in df_item.columns or 'price_s' not in df_item.columns or 'date' not in df_item.columns:
+            return pd.DataFrame()
             
-        # Agrupa por item e calcula média de preço e contagem
-        # Filtra apenas preços > 0 para evitar distorções com doações/erros
-        valid_sales = target_df[target_df['price_s'] > 0]
+        # Separate WTS and WTB
+        wts = df_item[df_item['operation'] == 'WTS'].groupby('date')['price_s'].min()
+        wtb = df_item[df_item['operation'] == 'WTB'].groupby('date')['price_s'].max()
         
-        if valid_sales.empty:
-            return {}
-            
-        summary = valid_sales.groupby('main_item', observed=True).agg({
-            'price_s': 'mean',
-            'main_qty': 'count' # Usamos count de linhas como volume de transações
-        }).to_dict('index')
+        # Merge and calculate spread
+        margins = pd.DataFrame({'min_wts': wts, 'max_wtb': wtb})
+        margins['spread'] = margins['min_wts'] - margins['max_wtb']
+        margins['margin_pct'] = (margins['spread'] / margins['max_wtb']) * 100
         
-        # Renomeia chaves para facilitar uso
-        result = {}
-        for item, data in summary.items():
-            result[str(item)] = {
-                'avg_s': data['price_s'],
-                'count': int(data['main_qty'])
-            }
+        return margins.dropna().sort_index()
+
+    def calculate_risk_trends(self, item_name: str, window: int = 7) -> pd.DataFrame:
+        """
+        Calcula tendências de risco (Volatilidade + Média Móvel).
+        """
+        # Reuse existing methods but ensure they return compatible DataFrames
+        vol = self.calculate_volatility(item_name, window)
+        ma = self.calculate_mean_average(item_name, window)
+        
+        if vol.empty or ma.empty:
+            return pd.DataFrame()
             
-        return result
+        # Merge on date
+        risk = pd.merge(vol, ma, on='date', how='inner')
+        risk['risk_score'] = risk['volatility'] / risk['moving_average']
+        
+        return risk.set_index('date').sort_index()
 
     def run_optimized(self) -> str:
         """
-        Executa uma análise otimizada e retorna um resumo em texto.
+        Executa otimizações de memória e retorna um resumo.
         """
-        if self.df is None or self.df.empty:
-            return "Nenhum dado carregado."
+        if self.df is None: return "Sem dados."
+        
+        start_mem = self.df.memory_usage(deep=True).sum()
+        
+        # Downcast numeric columns
+        for col in self.df.select_dtypes(include=['float']).columns:
+            self.df[col] = pd.to_numeric(self.df[col], downcast='float')
+        for col in self.df.select_dtypes(include=['int']).columns:
+            self.df[col] = pd.to_numeric(self.df[col], downcast='integer')
             
-        stats = self.get_stats()
-        
-        summary = [
-            "=== Estatísticas Gerais ===",
-            f"Total de Registros: {stats.get('total_records', 0):,}",
-            f"Uso de Memória: {stats.get('memory_usage', 0):.2f} MB",
-            f"Período: {stats.get('date_range', ('N/A', 'N/A'))}",
-            "",
-            "=== Top Itens (Volume) ===",
-        ]
-        
-        if 'main_item' in self.df.columns:
-            top_items = self.cleaned_df['main_item'].value_counts().head(10) if hasattr(self, 'cleaned_df') and not self.cleaned_df.empty else self.df['main_item'].value_counts().head(10)
-            for item, count in top_items.items():
-                summary.append(f"{item}: {count:,}")
+        # Convert object to category where appropriate
+        for col in self.df.select_dtypes(include=['object']).columns:
+            if self.df[col].nunique() / len(self.df) < 0.5:
+                self.df[col] = self.df[col].astype('category')
                 
-        return "\n".join(summary)
+        end_mem = self.df.memory_usage(deep=True).sum()
+        saved = (start_mem - end_mem) / 1024 / 1024
+        
+        return f"Otimização concluída. Economia de {saved:.2f} MB."
 
+if __name__ == "__main__":
+    # Teste rápido
+    try:
+        engine = WurmStatsEngine(data_path="data/wurm_trade_master_2025_clean.txt", sample_size=1000)
+        print(engine.get_stats())
+        
+        # Teste de novos métodos
+        print("\nTeste de Volatilidade:")
+        print(engine.calculate_volatility("iron", window=3).head())
+        
+    except Exception as e:
+        print(f"Erro no teste: {e}")
