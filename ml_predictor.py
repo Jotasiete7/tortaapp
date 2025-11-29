@@ -35,7 +35,8 @@ class MLPredictor:
         # 1. Feature Engineering: Conversão de Item Name (variável categórica)
         # O One-Hot Encoding cria colunas binárias para cada item.
         # Isto é essencial para que o modelo de ML possa processar o nome do item.
-        df_ml = pd.get_dummies(df, columns=['Item Name'], prefix='item', drop_first=False)
+        # [MODIFIED] Changed 'Item Name' to 'main_item'
+        df_ml = pd.get_dummies(df, columns=['main_item'], prefix='item', drop_first=False)
         
         # 2. Extração de Features Temporais (útil para Séries Temporais ou Previsão)
         if 'Timestamp' in df.columns:
@@ -44,7 +45,7 @@ class MLPredictor:
         
         # 3. Seleção de Features Numéricas para o Modelo
         # As features de preço e volume são geralmente usadas.
-        features = [col for col in df_ml.columns if col.startswith(('Price', 'Volume', 'item_')) or col in ['hour', 'dayofweek']]
+        features = [col for col in df_ml.columns if col.startswith(('Price', 'Volume', 'item_')) or col in ['hour', 'dayofweek', 'price_iron']]
         
         # Remover colunas que possam causar vazamento de dados (e.g., Margem de Lucro calculada posteriormente)
         features_clean = [f for f in features if f not in ['Profit Margin', 'Risk Trend']] 
@@ -66,12 +67,12 @@ class MLPredictor:
         # Simula a detecção de preços anômalos (outliers)
         
         # Para fins de stub, calculamos o Z-Score para o preço de venda
-        if 'Price WTS' in df_ml_ready.columns:
-            mean_price = df_ml_ready['Price WTS'].mean()
-            std_price = df_ml_ready['Price WTS'].std()
+        if 'price_iron' in df_ml_ready.columns:
+            mean_price = df_ml_ready['price_iron'].mean()
+            std_price = df_ml_ready['price_iron'].std()
             
             # Identifica trades onde o preço está 2 desvios padrão acima da média
-            df_anomalies = df_ml_ready[df_ml_ready['Price WTS'] > (mean_price + 2 * std_price)].head(3)
+            df_anomalies = df_ml_ready[df_ml_ready['price_iron'] > (mean_price + 2 * std_price)].head(3)
             
             insights = []
             for index, row in df_anomalies.iterrows():
@@ -81,7 +82,7 @@ class MLPredictor:
 
                 insights.append({
                     "Item": item_name,
-                    "Preço Anômalo (WTS)": f"R${row['Price WTS']:.2f}",
+                    "Preço Anômalo (WTS)": f"R${row['price_iron'] / 100:.2f} (Copper)",
                     "Sugestão": "Venda Rápida (Preço acima da tendência).",
                     "Score de Risco": f"{np.random.rand():.2f}"
                 })
