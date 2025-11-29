@@ -41,13 +41,13 @@ def test_preprocess_for_ml(sample_dataframe):
     processed = predictor.preprocess_for_ml(sample_dataframe)
     
     assert not processed.empty
-    assert 'price_iron' in processed.columns 
-    # assert 'main_item' in processed.columns # Removed because it is consumed by get_dummies
+    assert 'price_iron' in processed.columns # Changed from price_s check (or added)
+    assert 'main_item' in processed.columns
 
 
 def test_predict_opportunities_zscore(sample_dataframe):
     """Testa predição com Z-Score."""
-    predictor = MLPredictor() 
+    predictor = MLPredictor() # Removed use_isolation_forest arg if it was there, or kept it default
     results = predictor.run_prediction(sample_dataframe)
     
     assert isinstance(results, list)
