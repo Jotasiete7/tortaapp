@@ -5,114 +5,78 @@ import json
 import pickle
 import logging
 import re
-def normalize_price(price_val):
-    """
-    Converte strings de preço (ex: '1g 50s', '1.5k', '100') para valor numérico em Copper.
-    Retorna float ou None se falhar.
-    """
-    if pd.isna(price_val):
-        return None
-        
-    if isinstance(price_val, (int, float)):
-        return float(price_val)
-        
-    s = str(price_val).lower().strip()
-    if not s or s == 'nan':
-        return None
-        
-    # Remove caracteres indesejados
-    s = s.replace(',', '.')
-    
-    try:
-        # Tenta conversão direta primeiro
-        return float(s)
-    except ValueError:
-        pass
-        
-    # Parse complexo (1g 50s 20c)
-    total_copper = 0.0
-    
-    # Regex para extrair partes
-    import re
-    
-    # Se tiver 'k' (1.5k = 1500) - assumindo que k = 1000 unidades base (copper?) ou silver?
-    # No Wurm, k geralmente é usado para quantidade, não preço. Mas se for preço:
-    if 'k' in s:
-        try:
-            val = float(re.sub(r'[^\d.]', '', s))
-            return val * 1000
-        except:
-            pass
-            
-    # Parse g/s/c
-    parts = re.findall(r'([\d.]+)\s*([gsc])', s)
-    if parts:
-        for val, unit in parts:
-            try:
-                v = float(val)
-                if unit == 'g': total_copper += v * 10000
-                elif unit == 's': total_copper += v * 100
-                elif unit == 'c': total_copper += v
-            except:
-                pass
-        return total_copper if total_copper > 0 else None
-        
-    return None
 
-import re
-def normalize_price(price_val):
+def parse_wurm_price(price_val):
     """
-    Converte strings de preço (ex: '1g 50s', '1.5k', '100') para valor numérico em Copper.
-    Retorna float ou None se falhar.
+    Converte preço para Iron Coins.
+    Aceita string (formato Wurm) ou numérico (Copper/Iron).
+    Retorna int (Iron Coins).
     """
-    if pd.isna(price_val):
-        return None
+    if pd.isna(price_val) or str(price_val).lower() in ['nan', 'none', '']:
+        return 0
         
+    # Se já for numérico (float/int), assume que é Copper (padrão antigo) e converte para Iron
     if isinstance(price_val, (int, float)):
-        return float(price_val)
+        return int(price_val * 100) # 1 Copper = 100 Iron
         
-    s = str(price_val).lower().strip()
-    if not s or s == 'nan':
-        return None
-        
-    # Remove caracteres indesejados
-    s = s.replace(',', '.')
+    price_str = str(price_val).lower().strip()
     
+    # Tenta converter string numérica direta ("1500.0") -> Assume Copper
     try:
-        # Tenta conversão direta primeiro
-        return float(s)
+        val = float(price_str)
+        return int(val * 100)
     except ValueError:
         pass
         
-    # Parse complexo (1g 50s 20c)
-    total_copper = 0.0
+    total_iron = 0
     
-    # Regex para extrair partes
-    import re
+    # Parse gold (1g = 100s = 10000c = 1000000i)
+    gold_match = re.search(r'(\d+)g', price_str)
+    if gold_match:
+        total_iron += int(gold_match.group(1)) * 1000000
     
-    # Se tiver 'k' (1.5k = 1500) - assumindo que k = 1000 unidades base (copper?) ou silver?
-    # No Wurm, k geralmente é usado para quantidade, não preço. Mas se for preço:
-    if 'k' in s:
-        try:
-            val = float(re.sub(r'[^\d.]', '', s))
-            return val * 1000
-        except:
-            pass
-            
-    # Parse g/s/c
-    parts = re.findall(r'([\d.]+)\s*([gsc])', s)
-    if parts:
-        for val, unit in parts:
-            try:
-                v = float(val)
-                if unit == 'g': total_copper += v * 10000
-                elif unit == 's': total_copper += v * 100
-                elif unit == 'c': total_copper += v
-            except:
-                pass
-        return total_copper if total_copper > 0 else None
+    # Parse silver (1s = 100c = 10000i)
+    silver_match = re.search(r'(\d+)s', price_str)
+    if silver_match:
+        total_iron += int(silver_match.group(1)) * 10000
+    
+    # Parse copper (1c = 100i)
+    copper_match = re.search(r'(\d+)c', price_str)
+    if copper_match:
+        total_iron += int(copper_match.group(1)) * 100
+    
+    # Parse iron
+    iron_match = re.search(r'(\d+)i', price_str)
+    if iron_match:
+        total_iron += int(iron_match.group(1))
+    
+    return total_iron
+
+def format_wurm_price(iron_val):
+    """
+    Converte valor em Iron Coins de volta para string formatada (1g 50s 25c).
+    """
+    if not isinstance(iron_val, (int, float)):
+        return "0i"
         
-    return None
+    iron_val = int(iron_val)
+    if iron_val == 0:
+        return "0i"
+        
+    g = iron_val // 1000000
+    rem = iron_val % 1000000
+    s = rem // 10000
+    rem = rem % 10000
+    c = rem // 100
+    i = rem % 100
+    
+    parts = []
+    if g > 0: parts.append(f"{g}g")
+    if s > 0: parts.append(f"{s}s")
+    if c > 0: parts.append(f"{c}c")
+    if i > 0: parts.append(f"{i}i")
+    
+    return " ".join(parts)
 
 from pathlib import Path
 
@@ -237,11 +201,13 @@ def load_data_and_build_cache(data_dir: str, force_rebuild: bool = False, sample
             
     # Normalização de Preço Especial
     if 'price_s' in df_master.columns:
-        logger.info("Normalizando preços...")
-        # Aplica a função de normalização
-        df_master['price_s'] = df_master['price_s'].apply(normalize_price)
-        # Agora converte para numérico final
-        df_master['price_s'] = pd.to_numeric(df_master['price_s'], errors='coerce')
+        logger.info("Normalizando preços (Iron Coins)...")
+        # Cria coluna price_iron usando o novo parser
+        df_master['price_iron'] = df_master['price_s'].apply(parse_wurm_price)
+        
+        # Mantém compatibilidade: price_s como float (Copper)
+        # Iron / 100 = Copper
+        df_master['price_s'] = df_master['price_iron'] / 100.0
 
     # Otimização de tipos (Categorias)
     if 'main_item' in df_master.columns:

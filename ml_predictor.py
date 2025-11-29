@@ -3,6 +3,7 @@ import pandas as pd
 # from statsmodels.tsa.arima.model import ARIMA
 import numpy as np
 import re
+from wurm_parser import format_wurm_price
 
 class MLPredictor:
     """
@@ -13,79 +14,6 @@ class MLPredictor:
         self.model = None 
         # Ex: self.model = load_model('kmeans_trade_clusters.pkl')
         print("MLPredictor inicializado. Modelo de ML não carregado (stub).")
-
-    @staticmethod
-    def parse_wurm_price(price_val):
-        """
-        Converte preço para Iron Coins.
-        Aceita string (formato Wurm) ou numérico (Copper).
-        """
-        if pd.isna(price_val) or str(price_val).lower() in ['nan', 'none', '']:
-            return 0
-            
-        # Se já for numérico (float/int), assume que é Copper (padrão do parser novo)
-        if isinstance(price_val, (int, float)):
-            return int(price_val * 100) # 1 Copper = 100 Iron
-            
-        price_str = str(price_val).lower().strip()
-        
-        # Tenta converter string numérica direta ("1500.0")
-        try:
-            val = float(price_str)
-            return int(val * 100)
-        except ValueError:
-            pass
-            
-        total_iron = 0
-        
-        # Parse gold (1g = 100s = 10000c = 1000000i)
-        gold_match = re.search(r'(\d+)g', price_str)
-        if gold_match:
-            total_iron += int(gold_match.group(1)) * 1000000
-        
-        # Parse silver (1s = 100c = 10000i)
-        silver_match = re.search(r'(\d+)s', price_str)
-        if silver_match:
-            total_iron += int(silver_match.group(1)) * 10000
-        
-        # Parse copper (1c = 100i)
-        copper_match = re.search(r'(\d+)c', price_str)
-        if copper_match:
-            total_iron += int(copper_match.group(1)) * 100
-        
-        # Parse iron
-        iron_match = re.search(r'(\d+)i', price_str)
-        if iron_match:
-            total_iron += int(iron_match.group(1))
-        
-        return total_iron
-
-    @staticmethod
-    def format_wurm_price(iron_val):
-        """
-        Converte valor em Iron Coins de volta para string formatada (1g 50s 25c).
-        """
-        if not isinstance(iron_val, (int, float)):
-            return "0i"
-            
-        iron_val = int(iron_val)
-        if iron_val == 0:
-            return "0i"
-            
-        g = iron_val // 1000000
-        rem = iron_val % 1000000
-        s = rem // 10000
-        rem = rem % 10000
-        c = rem // 100
-        i = rem % 100
-        
-        parts = []
-        if g > 0: parts.append(f"{g}g")
-        if s > 0: parts.append(f"{s}s")
-        if c > 0: parts.append(f"{c}c")
-        if i > 0: parts.append(f"{i}i")
-        
-        return " ".join(parts)
 
     def preprocess_for_ml(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -99,18 +27,41 @@ class MLPredictor:
             return pd.DataFrame()
 
         # 1. Feature Engineering: Conversão de Item Name (variável categórica)
-        # O One-Hot Encoding cria colunas binárias para cada item.
-        # Isto é essencial para que o modelo de ML possa processar o nome do item.
-        df_ml = pd.get_dummies(df, columns=['Item Name'], prefix='item', drop_first=False)
+        # CORREÇÃO DE MEMÓRIA: Usar Top N Encoding em vez de One-Hot Encoding total
+        
+        target_col = 'main_item' if 'main_item' in df.columns else 'Item Name'
+        
+        if target_col not in df.columns:
+            print(f"Aviso: Coluna de item '{target_col}' não encontrada no DataFrame.")
+            return pd.DataFrame()
+
+        # Configuração do Top N
+        TOP_N = 50
+        
+        # 1.1. Identificar os Top N Itens
+        top_items = df[target_col].value_counts().head(TOP_N).index.tolist()
+        
+        # 1.2. Criar uma nova coluna categórica: 'item_encoded'
+        # Se o item estiver no Top N, mantém o nome. Caso contrário, define como 'Other'.
+        # Usamos uma cópia para não alterar o df original se ele for usado fora
+        df_processed = df.copy()
+        df_processed['item_encoded'] = df_processed[target_col].apply(lambda x: x if x in top_items else 'Other')
+        
+        # 1.3. Aplicar One-Hot Encoding APENAS na nova coluna 'item_encoded'
+        # Isso criará apenas ~51 colunas (Top 50 + Other), em vez de milhares.
+        # CORREÇÃO: dtype=int para garantir 0/1 em vez de False/True
+        df_ml = pd.get_dummies(df_processed, columns=['item_encoded'], prefix='item_encoded', drop_first=False, dtype=int)
         
         # 2. Extração de Features Temporais (útil para Séries Temporais ou Previsão)
-        if 'Timestamp' in df.columns:
-            df_ml['hour'] = df['Timestamp'].dt.hour
-            df_ml['dayofweek'] = df['Timestamp'].dt.dayofweek
+        if 'Timestamp' in df_ml.columns:
+            df_ml['hour'] = df_ml['Timestamp'].dt.hour
+            df_ml['dayofweek'] = df_ml['Timestamp'].dt.dayofweek
         
         # 3. Seleção de Features Numéricas para o Modelo
         # As features de preço e volume são geralmente usadas.
-        features = [col for col in df_ml.columns if col.startswith(('Price', 'Volume', 'item_')) or col in ['hour', 'dayofweek']]
+        # Inclui price_iron se disponível
+        # O prefixo agora é 'item_encoded_'
+        features = [col for col in df_ml.columns if col.startswith(('Price', 'Volume', 'item_encoded_', 'price_')) or col in ['hour', 'dayofweek']]
         
         # Remover colunas que possam causar vazamento de dados (e.g., Margem de Lucro calculada posteriormente)
         features_clean = [f for f in features if f not in ['Profit Margin', 'Risk Trend']] 
@@ -119,51 +70,56 @@ class MLPredictor:
 
     def detect_anomalies(self, df_ml_ready: pd.DataFrame) -> list:
         """
-        Detecta anomalias de preço usando Z-Score.
+        Detecta anomalias de preço usando Z-Score baseado na Mediana (Robust Z-Score).
         """
-        # Verifica se temos colunas de preço. O preprocessamento pode ter removido ou alterado nomes.
-        # Assumindo que o df original tinha 'Price WTS' ou similar e foi mantido ou precisamos passar o df original também?
-        # O preprocess_for_ml retorna apenas features numéricas.
-        # Se 'Price WTS' estava no df original, ele deve estar em df_ml_ready se começar com 'Price'.
-        
-        # Vamos tentar identificar a coluna de preço.
-        price_col = next((col for col in df_ml_ready.columns if 'Price' in col and 'WTS' in col), None)
+        # Identifica a coluna de preço numérica (Iron Coins)
+        price_col = 'price_iron'
+        if price_col not in df_ml_ready.columns:
+            # Tenta fallback para Price WTS se price_iron não existir (compatibilidade)
+            price_col = next((col for col in df_ml_ready.columns if 'Price' in col and 'WTS' in col), None)
         
         if df_ml_ready.empty or not price_col:
             return []
             
-        # Filtra preços válidos
+        # Filtra preços válidos (> 0)
         df_valid = df_ml_ready[df_ml_ready[price_col] > 0].copy()
         if df_valid.empty:
             return []
             
         insights = []
         
-        # Precisamos recuperar o nome do item. Como fizemos One-Hot, temos colunas item_NomeDoItem.
-        # Isso é um pouco custoso de reverter, mas necessário para o insight.
-        
-        # Iterar sobre as colunas de item
-        item_cols = [col for col in df_valid.columns if col.startswith('item_')]
+        # Iterar sobre as colunas de item (One-Hot Encoded)
+        # Agora o prefixo é 'item_encoded_'
+        item_cols = [col for col in df_valid.columns if col.startswith('item_encoded_')]
         
         for item_col in item_cols:
+            # Ignora a categoria 'Other' pois é uma mistura de itens
+            if item_col == 'item_encoded_Other':
+                continue
+                
             # Filtra linhas onde este item está presente (valor 1)
             item_data = df_valid[df_valid[item_col] == 1]
             
-            if len(item_data) < 5: # Precisa de mínimo de dados para média confiável
+            if len(item_data) < 5: # Precisa de mínimo de dados para estatística confiável
                 continue
                 
-            mean_price = item_data[price_col].mean()
+            # 1. Calcular a Mediana (mais robusta que a Média)
+            median_price = item_data[price_col].median()
+            
+            # 2. Calcular o Desvio Padrão (STD)
             std_price = item_data[price_col].std()
             
             if std_price == 0:
                 continue
                 
-            # Analisa as transações mais recentes (assumindo ordenação temporal ou pegando últimas)
+            # Analisa as transações mais recentes
             recent_txs = item_data.tail(3)
             
             for idx, row in recent_txs.iterrows():
                 price = row[price_col]
-                z_score = (price - mean_price) / std_price
+                
+                # Z-Score baseado na Mediana
+                z_score = (price - median_price) / std_price
                 
                 # Threshold de 1.5 sigmas
                 if abs(z_score) > 1.5:
@@ -171,20 +127,26 @@ class MLPredictor:
                     tipo = "OPORTUNIDADE (BARATO)" if z_score < 0 else "ALERTA (CARO)"
                     acao = "COMPRAR" if z_score < 0 else "VENDER"
                     
-                    # Formata preços (assumindo que estão em Copper ou similar, convertemos para Iron para formatar)
+                    # Formata preços (Iron Coins)
                     price_iron = int(price) 
-                    mean_iron = int(mean_price)
+                    median_iron = int(median_price)
                     
-                    price_str = self.format_wurm_price(price_iron)
-                    mean_str = self.format_wurm_price(mean_iron)
+                    price_str = format_wurm_price(price_iron)
+                    median_str = format_wurm_price(median_iron)
                     
-                    item_name = item_col.replace('item_', '')
+                    # Extração robusta do nome do item
+                    # item_col é 'item_encoded_NomeDoItem'
+                    try:
+                        # Remove 'item_encoded_' (13 caracteres)
+                        item_name = item_col[13:]
+                    except IndexError:
+                        item_name = item_col
                     
                     insight = {
                         "Item": item_name,
                         "Preço": price_str,
                         "Tipo": tipo,
-                        "Detalhe": f"{acao}! Preço {abs(z_score):.1f}x sigma longe da média ({mean_str})",
+                        "Detalhe": f"{acao}! Preço {abs(z_score):.1f}x sigma longe da mediana ({median_str})",
                         "Score": f"Z={z_score:.1f}"
                     }
                     insights.append(insight)
@@ -195,7 +157,7 @@ class MLPredictor:
 
     def predict_opportunities(self, df_ml_ready: pd.DataFrame) -> list:
         """
-        Mantido para compatibilidade, mas a lógica principal foi movida para detect_anomalies.
+        Mantido para compatibilidade.
         """
         return self.detect_anomalies(df_ml_ready)
 
@@ -210,11 +172,12 @@ class MLPredictor:
             anomalies = self.detect_anomalies(df_ml_ready)
             insights.extend(anomalies)
             
-        # 2. Oportunidades Gerais (Lógica antiga/stub)
+        # 2. Oportunidades Gerais
         if not insights and analysis_type in ['all', 'general']:
             pass
                 
+        # CORREÇÃO: Retorna lista vazia se não houver insights
         if not insights:
-             return [{"insight": "Nenhum insight relevante encontrado."}]
+             return []
              
         return insights
