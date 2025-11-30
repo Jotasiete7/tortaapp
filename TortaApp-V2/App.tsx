@@ -6,15 +6,21 @@ import { MarketTable } from './components/MarketTable';
 import { ChartsView } from './components/ChartsView';
 import { MLPredictor } from './components/MLPredictor';
 import { PriceManager } from './components/PriceManager';
+import { Login } from './components/Login';
+import { AdminPanel } from './components/AdminPanel';
+import { NewsTicker } from './components/NewsTicker';
+import { ProtectedAdmin } from './components/ProtectedAdmin';
 import { ViewState, MarketItem, ChartDataPoint, Language } from './types';
 import { parseTradeFile } from './services/fileParser';
 import { generateChartDataFromHistory } from './services/dataUtils';
 import { parsePriceCSV, loadPricesFromStorage, savePricesToStorage } from './services/priceUtils';
 import { DEFAULT_PRICES_CSV } from './services/defaultPrices';
 import { translations } from './services/i18n';
-import { Globe } from 'lucide-react';
+import { useAuth } from './contexts/AuthContext';
+import { Globe, LogOut, Shield } from 'lucide-react';
 
 const App: React.FC = () => {
+    const { user, role, loading: authLoading, signOut } = useAuth();
     const [currentView, setCurrentView] = useState<ViewState>(ViewState.DASHBOARD);
     const [marketData, setMarketData] = useState<MarketItem[]>([]);
     const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
@@ -24,6 +30,19 @@ const App: React.FC = () => {
 
     const [isProcessingFile, setIsProcessingFile] = useState(false);
     const [dataSource, setDataSource] = useState<'NONE' | 'FILE'>('NONE');
+
+    // Show login if not authenticated
+    if (authLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-slate-900">
+                <div className="animate-spin w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full"></div>
+            </div>
+        );
+    }
+
+    if (!user) {
+        return <Login />;
+    }
 
     // Load Prices on Mount (Storage -> Default)
     useEffect(() => {
@@ -112,14 +131,20 @@ const App: React.FC = () => {
             case ViewState.PREDICTOR:
                 return <MLPredictor data={marketData} />;
             case ViewState.PRICEMANAGER:
-                return <PriceManager prices={referencePrices} onUpdatePrices={handleUpdatePrices} />;
+                return (
+                    <ProtectedAdmin>
+                        <PriceManager prices={referencePrices} onUpdatePrices={handleUpdatePrices} />
+                    </ProtectedAdmin>
+                );
+            case ViewState.ADMIN:
+                return <AdminPanel />;
             case ViewState.SETTINGS:
                 return (
                     <div className="flex flex-col items-center justify-start h-full text-slate-500 pt-12 animate-fade-in">
                         <div className="bg-slate-800 p-8 rounded-xl border border-slate-700 w-full max-w-md shadow-lg">
                             <div className="text-center mb-8">
                                 <h2 className="text-2xl font-bold text-white mb-2">{t.appSettings}</h2>
-                                <div className="text-sm font-mono text-slate-600">v2.2.0</div>
+                                <div className="text-sm font-mono text-slate-600">v3.0.0</div>
                             </div>
 
                             <div className="space-y-6">
@@ -154,7 +179,7 @@ const App: React.FC = () => {
                                     </div>
                                     <div className="flex justify-between text-sm">
                                         <span>{t.version}:</span>
-                                        <span className="text-slate-400">2.2.0</span>
+                                        <span className="text-slate-400">3.0.0</span>
                                     </div>
                                 </div>
                             </div>
@@ -175,9 +200,12 @@ const App: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-slate-900 text-slate-200 font-sans">
+            {/* Global News Ticker */}
+            <NewsTicker />
+
             <Sidebar currentView={currentView} onNavigate={setCurrentView} language={language} />
 
-            <main className="ml-64 p-8 min-h-screen transition-all duration-300">
+            <main className="ml-64 p-8 min-h-screen transition-all duration-300 pt-16">
                 <header className="flex justify-between items-center mb-8 pb-6 border-b border-slate-800">
                     <div className="flex items-center gap-4">
                         {dataSource === 'FILE' ? (
@@ -192,12 +220,24 @@ const App: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-4">
                         <div className="text-right hidden sm:block">
-                            <div className="text-sm font-medium text-white">Admin User</div>
-                            <div className="text-xs text-slate-400">Connected to Localhost:8000</div>
+                            <div className="text-sm font-medium text-white flex items-center gap-2">
+                                {user.email}
+                                <span className={`px-2 py-0.5 rounded text-xs font-mono ${role === 'admin' ? 'bg-amber-500 text-black' :
+                                        role === 'moderator' ? 'bg-purple-500 text-white' :
+                                            'bg-slate-700 text-slate-300'
+                                    }`}>
+                                    {role}
+                                </span>
+                            </div>
+                            <div className="text-xs text-slate-400">WurmForge v3.0</div>
                         </div>
-                        <div className="w-10 h-10 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center text-sm font-bold text-white shadow-md">
-                            AU
-                        </div>
+                        <button
+                            onClick={signOut}
+                            className="p-2 hover:bg-slate-800 rounded-lg transition text-slate-400 hover:text-rose-400"
+                            title="Sign Out"
+                        >
+                            <LogOut className="w-5 h-5" />
+                        </button>
                     </div>
                 </header>
 
