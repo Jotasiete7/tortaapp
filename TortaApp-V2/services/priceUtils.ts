@@ -168,3 +168,27 @@ export const evaluateTrade = (itemName: string, price: number, referencePrices: 
 
     return { referencePrice: ref.price, deltaPercent: delta, rating };
 };
+
+// --- PERSISTENCE UTILS ---
+
+const STORAGE_KEY = 'torta_app_prices_v1';
+
+export const savePricesToStorage = (prices: Record<string, number>): void => {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(prices));
+        console.log('Prices saved to localStorage');
+    } catch (e) {
+        console.error('Failed to save prices to storage', e);
+    }
+};
+
+export const loadPricesFromStorage = (): Record<string, number> | null => {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw);
+    } catch (e) {
+        console.error('Failed to load prices from storage', e);
+        return null;
+    }
+};
