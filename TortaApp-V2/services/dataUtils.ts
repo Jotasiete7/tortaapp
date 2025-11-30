@@ -37,15 +37,15 @@ export const getItemHistory = (items: MarketItem[], itemName: string): ItemHisto
     filtered.forEach(item => {
         let date: string;
         try {
-             date = new Date(item.timestamp).toISOString().split('T')[0];
+            date = new Date(item.timestamp).toISOString().split('T')[0];
         } catch (e) {
-             return;
+            return;
         }
 
         if (!groups[date]) {
             groups[date] = { total: 0, min: item.price, max: item.price, count: 0 };
         }
-        
+
         groups[date].total += item.price;
         groups[date].min = Math.min(groups[date].min, item.price);
         groups[date].max = Math.max(groups[date].max, item.price);
@@ -64,7 +64,7 @@ export const getItemHistory = (items: MarketItem[], itemName: string): ItemHisto
 };
 
 /**
- * Generates a histogram of prices for an item to see 'Fair Value' clusters
+ * Generates a histogram of prices for an item to see "Fair Value" clusters
  */
 export const getPriceDistribution = (items: MarketItem[], itemName: string): PriceDistributionPoint[] => {
     const filtered = items.filter(i => i.name.toLowerCase() === itemName.toLowerCase() && i.price > 0);
@@ -73,14 +73,14 @@ export const getPriceDistribution = (items: MarketItem[], itemName: string): Pri
     const prices = filtered.map(i => i.price).sort((a, b) => a - b);
     const min = prices[0];
     const max = prices[prices.length - 1];
-    
+
     // Create 10 buckets
     const bucketCount = 10;
     const range = max - min;
     const step = range / bucketCount || 1; // Avoid divide by zero if all prices same
 
     const buckets = new Array(bucketCount).fill(0);
-    
+
     prices.forEach(p => {
         const bucketIndex = Math.min(Math.floor((p - min) / step), bucketCount - 1);
         buckets[bucketIndex]++;
@@ -90,10 +90,10 @@ export const getPriceDistribution = (items: MarketItem[], itemName: string): Pri
         const start = min + (i * step);
         const end = min + ((i + 1) * step);
         // Format label nicely based on value magnitude
-        const label = start < 100 
-            ? \\c - \c\
-            : \\s - \s\;
-            
+        const label = start < 100
+            ? `${start.toFixed(2)}c - ${end.toFixed(2)}c`
+            : `${(start / 100).toFixed(2)}s - ${(end / 100).toFixed(2)}s`;
+
         return { range: label, count };
     });
 };
@@ -105,12 +105,12 @@ export const generateChartDataFromHistory = (items: MarketItem[]): ChartDataPoin
     const groups: { [date: string]: { totalCopper: number, count: number } } = {};
     items.forEach(item => {
         if (item.price <= 0) return;
-        
+
         let dateKey: string;
         try {
-             dateKey = new Date(item.timestamp).toISOString().split('T')[0];
+            dateKey = new Date(item.timestamp).toISOString().split('T')[0];
         } catch (e) {
-             return;
+            return;
         }
 
         if (!groups[dateKey]) groups[dateKey] = { totalCopper: 0, count: 0 };
@@ -127,4 +127,3 @@ export const generateChartDataFromHistory = (items: MarketItem[]): ChartDataPoin
     });
     return chartData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 };
-
