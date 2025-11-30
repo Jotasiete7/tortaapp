@@ -1,0 +1,1 @@
+{"name":"torta-analytics","version":"1.0.0","description":"TypeScript services for Wurm Online Trade Analysis","main":"index.js","scripts":{"test":"ts-node test_migration.ts","build":"tsc","check":"tsc --noEmit"},"keywords":["wurm","trade","analytics"],"author":"","license":"ISC","devDependencies":{"@types/node":"^20.10.0","ts-node":"^10.9.2","typescript":"^5.3.3"}}
