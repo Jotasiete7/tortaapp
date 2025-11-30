@@ -10,6 +10,7 @@ import { Login } from './components/Login';
 import { AdminPanel } from './components/AdminPanel';
 import { NewsTicker } from './components/NewsTicker';
 import { ProtectedAdmin } from './components/ProtectedAdmin';
+import { AuthCallback } from './components/AuthCallback';
 import { ViewState, MarketItem, ChartDataPoint, Language } from './types';
 import { parseTradeFile } from './services/fileParser';
 import { generateChartDataFromHistory } from './services/dataUtils';
@@ -20,6 +21,15 @@ import { useAuth } from './contexts/AuthContext';
 import { Globe, LogOut, Shield } from 'lucide-react';
 
 const App: React.FC = () => {
+    // Use state to lock the callback view so it doesn't unmount if hash is cleared
+    const [isCallback, setIsCallback] = useState(false);
+
+    useEffect(() => {
+        if (window.location.pathname === '/auth/v1/callback' || window.location.hash.includes('access_token')) {
+            setIsCallback(true);
+        }
+    }, []);
+
     const { user, role, loading: authLoading, signOut } = useAuth();
     const [currentView, setCurrentView] = useState<ViewState>(ViewState.DASHBOARD);
     const [marketData, setMarketData] = useState<MarketItem[]>([]);
@@ -30,6 +40,11 @@ const App: React.FC = () => {
 
     const [isProcessingFile, setIsProcessingFile] = useState(false);
     const [dataSource, setDataSource] = useState<'NONE' | 'FILE'>('NONE');
+
+    // If we are in callback mode, ALWAYS show AuthCallback until it redirects
+    if (isCallback) {
+        return <AuthCallback />;
+    }
 
     // Show login if not authenticated
     if (authLoading) {
