@@ -1,7 +1,7 @@
-
 import React, { useRef, useMemo } from 'react';
 import { ArrowUpRight, ArrowDownRight, Activity, Database, DollarSign, Cpu, Upload, Loader2 } from 'lucide-react';
 import { LogUploader } from './LogProcessor/LogUploader';
+import { Leaderboard } from './Leaderboard';
 import { MarketItem, Language } from '../types';
 import { translations } from '../services/i18n';
 
@@ -191,17 +191,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ onFileUpload, isProcessing
       </div>
 
       {/* NEW: RAW Log Processor Section */}
-      <div className="mt-8">
-        <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-          <Database className="w-5 h-5 text-amber-500" />
-          Advanced Data Tools
-        </h2>
-        <LogUploader
-          onProcessingComplete={(records) => {
-            console.log("Processed RAW logs:", records);
-            // Future: Update global state or send to Supabase
-          }}
-        />
+      <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+            <Database className="w-5 h-5 text-amber-500" />
+            Advanced Data Tools
+          </h2>
+          <LogUploader
+            onProcessingComplete={(records) => {
+              console.log("Processed RAW logs:", records);
+            }}
+          />
+        </div>
+
+        <div className="mt-12 lg:mt-0">
+          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+            <Activity className="w-5 h-5 text-emerald-500" />
+            Market Intelligence
+          </h2>
+          <Leaderboard />
+        </div>
       </div>
     </div>
   );
