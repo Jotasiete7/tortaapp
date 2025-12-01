@@ -176,7 +176,19 @@ class TradeData:
             if bad:
                 continue
 
-            # TODO: add fuzzy matching if requested (Levenshtein or difflib)
+            # Fuzzy matching using difflib
+            if fuzzy:
+                import difflib
+                line_words = line.lower().split()
+                match_found = False
+                for token in must_tokens:
+                    if difflib.get_close_matches(token.lower(), line_words, n=1, cutoff=0.7):
+                        match_found = True
+                        break
+                if match_found:
+                    results.append(line)
+                    continue
+
             results.append(line)
         return results
 
@@ -1175,3 +1187,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

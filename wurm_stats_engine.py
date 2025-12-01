@@ -1,8 +1,8 @@
-"""
+﻿"""
 Wurm Online Trade Analyzer - Statistics Engine
 ===============================================
 
-Este módulo fornece a classe WurmStatsEngine para carregar e analisar
+Este mÃ³dulo fornece a classe WurmStatsEngine para carregar e analisar
 dados de trade do Wurm Online usando Pandas.
 
 Autor: Senior Python Engineer
@@ -16,17 +16,17 @@ from typing import Optional, Union, List, Dict, Any
 from datetime import datetime
 import logging
 
-# Configuração de logging
+# ConfiguraÃ§Ã£o de logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
 class WurmStatsEngine:
     """
-    Motor de estatísticas para análise de dados de trade do Wurm Online.
+    Motor de estatÃ­sticas para anÃ¡lise de dados de trade do Wurm Online.
     
-    Esta classe carrega dados de arquivos JSON Lines e fornece métodos
-    para análise estatística avançada usando Pandas DataFrame.
+    Esta classe carrega dados de arquivos JSON Lines e fornece mÃ©todos
+    para anÃ¡lise estatÃ­stica avanÃ§ada usando Pandas DataFrame.
     
     Attributes:
         data_path (Path): Caminho para o arquivo de dados
@@ -40,16 +40,16 @@ class WurmStatsEngine:
         """
         Inicializa o WurmStatsEngine.
         
-        Suporta Injeção de Dependência: pode receber um DataFrame já carregado
+        Suporta InjeÃ§Ã£o de DependÃªncia: pode receber um DataFrame jÃ¡ carregado
         ou um caminho para carregar os dados.
         
         Args:
             data_path: Caminho para o arquivo de dados JSON Lines (opcional se df for fornecido)
-            sample_size: Número de linhas para carregar (None = todas).
+            sample_size: NÃºmero de linhas para carregar (None = todas).
             df: DataFrame injetado (opcional). Se fornecido, ignora data_path.
             
         Raises:
-            FileNotFoundError: Se o arquivo não existir
+            FileNotFoundError: Se o arquivo nÃ£o existir
             ValueError: Se nem data_path nem df forem fornecidos
         """
         self.data_path = Path(data_path) if data_path else None
@@ -58,25 +58,25 @@ class WurmStatsEngine:
         self.sample_size = sample_size
         
         if df is not None:
-            # Injeção de dependência: usa o DataFrame fornecido
+            # InjeÃ§Ã£o de dependÃªncia: usa o DataFrame fornecido
             logger.info("Inicializando com DataFrame injetado.")
             self.df = df
             self._generate_metadata()
-            logger.info(f"✔ Dados injetados: {len(self.df):,} registros")
+            logger.info(f"âœ” Dados injetados: {len(self.df):,} registros")
         elif self.data_path:
-            # Carregamento padrão
+            # Carregamento padrÃ£o
             if not self.data_path.exists():
-                raise FileNotFoundError(f"Arquivo não encontrado: {self.data_path}")
+                raise FileNotFoundError(f"Arquivo nÃ£o encontrado: {self.data_path}")
             
             if not self.data_path.is_file():
-                raise ValueError(f"O caminho não é um arquivo: {self.data_path}")
+                raise ValueError(f"O caminho nÃ£o Ã© um arquivo: {self.data_path}")
             
             logger.info(f"Iniciando carregamento de {self.data_path.name}...")
             self._load_data()
             self._generate_metadata()
-            logger.info(f"✔ Dados carregados: {len(self.df):,} registros, {len(self.df.columns)} colunas")
+            logger.info(f"âœ” Dados carregados: {len(self.df):,} registros, {len(self.df.columns)} colunas")
         else:
-            raise ValueError("É necessário fornecer 'data_path' ou 'df' para inicializar o engine.")
+            raise ValueError("Ã‰ necessÃ¡rio fornecer 'data_path' ou 'df' para inicializar o engine.")
     
     def _load_data(self) -> None:
         """
@@ -86,7 +86,7 @@ class WurmStatsEngine:
             import wurm_parser
             logger.info("Usando wurm_parser para carregamento inteligente...")
             
-            # Passa o diretório pai do arquivo de dados para o parser
+            # Passa o diretÃ³rio pai do arquivo de dados para o parser
             data_dir = self.data_path.parent
             
             self.df = wurm_parser.load_data_and_build_cache(
@@ -100,23 +100,23 @@ class WurmStatsEngine:
                 
             self._setup_index()
             
-            logger.info(f"📋 Colunas carregadas: {', '.join(self.df.columns[:10])}...")
+            logger.info(f"ðŸ“‹ Colunas carregadas: {', '.join(self.df.columns[:10])}...")
             
         except Exception as e:
             raise RuntimeError(f"Erro ao carregar dados: {e}")
 
     def _setup_index(self) -> None:
-        """Configura o índice do DataFrame para otimização."""
+        """Configura o Ã­ndice do DataFrame para otimizaÃ§Ã£o."""
         if self.df is None: return
         
-        # Garante que temos um índice temporal se possível
+        # Garante que temos um Ã­ndice temporal se possÃ­vel
         if 'timestamp' in self.df.columns and not isinstance(self.df.index, pd.DatetimeIndex):
             self.df['timestamp'] = pd.to_datetime(self.df['timestamp'])
             self.df.set_index('timestamp', inplace=True)
             self.df.sort_index(inplace=True)
 
     def _generate_metadata(self) -> None:
-        """Gera metadados básicos sobre o dataset."""
+        """Gera metadados bÃ¡sicos sobre o dataset."""
         if self.df is None: return
         
         self.metadata = {
@@ -130,7 +130,7 @@ class WurmStatsEngine:
         }
 
     def get_stats(self) -> Dict[str, Any]:
-        """Retorna estatísticas gerais do dataset."""
+        """Retorna estatÃ­sticas gerais do dataset."""
         return self.metadata
 
     def filter_by_item(self, item_name: str, exact: bool = False) -> pd.DataFrame:
@@ -141,7 +141,7 @@ class WurmStatsEngine:
         return self.df[self.df['main_item'].str.contains(item_name, case=False, na=False)]
 
     def calculate_volatility(self, item_name: str, window: int = 7) -> pd.DataFrame:
-        """Calcula a volatilidade (desvio padrão) do preço."""
+        """Calcula a volatilidade (desvio padrÃ£o) do preÃ§o."""
         df_item = self.filter_by_item(item_name)
         if df_item.empty or 'price_s' not in df_item.columns:
             return pd.DataFrame()
@@ -152,7 +152,7 @@ class WurmStatsEngine:
         return volatility.reset_index(name='volatility')
 
     def calculate_mean_average(self, item_name: str, window: int = 7) -> pd.DataFrame:
-        """Calcula a média móvel do preço."""
+        """Calcula a mÃ©dia mÃ³vel do preÃ§o."""
         df_item = self.filter_by_item(item_name)
         if df_item.empty or 'price_s' not in df_item.columns:
             return pd.DataFrame()
@@ -183,7 +183,7 @@ class WurmStatsEngine:
 
     def calculate_risk_trends(self, item_name: str, window: int = 7) -> pd.DataFrame:
         """
-        Calcula tendências de risco (Volatilidade + Média Móvel).
+        Calcula tendÃªncias de risco (Volatilidade + MÃ©dia MÃ³vel).
         """
         # Reuse existing methods but ensure they return compatible DataFrames
         vol = self.calculate_volatility(item_name, window)
@@ -200,7 +200,7 @@ class WurmStatsEngine:
 
     def run_optimized(self) -> str:
         """
-        Executa otimizações de memória e retorna um resumo.
+        Executa otimizaÃ§Ãµes de memÃ³ria e retorna um resumo.
         """
         if self.df is None: return "Sem dados."
         
@@ -220,17 +220,18 @@ class WurmStatsEngine:
         end_mem = self.df.memory_usage(deep=True).sum()
         saved = (start_mem - end_mem) / 1024 / 1024
         
-        return f"Otimização concluída. Economia de {saved:.2f} MB."
+        return f"OtimizaÃ§Ã£o concluÃ­da. Economia de {saved:.2f} MB."
 
 if __name__ == "__main__":
-    # Teste rápido
+    # Teste rÃ¡pido
     try:
-        engine = WurmStatsEngine(data_path="data/wurm_trade_master_2025_clean.txt", sample_size=1000)
+        test_file = Path("data/wurm_trade_master_2025_clean.txt")`r`n        if test_file.exists():`r`n            engine = WurmStatsEngine(data_path=test_file, sample_size=1000)
         print(engine.get_stats())
         
-        # Teste de novos métodos
+        # Teste de novos mÃ©todos
         print("\nTeste de Volatilidade:")
         print(engine.calculate_volatility("iron", window=3).head())
         
     except Exception as e:
         print(f"Erro no teste: {e}")
+
