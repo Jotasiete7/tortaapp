@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
@@ -19,17 +18,14 @@ import { DEFAULT_PRICES_CSV } from './services/defaultPrices';
 import { translations } from './services/i18n';
 import { useAuth } from './contexts/AuthContext';
 import { Globe, LogOut, Shield } from 'lucide-react';
-
 const App: React.FC = () => {
     // Use state to lock the callback view so it doesn't unmount if hash is cleared
     const [isCallback, setIsCallback] = useState(false);
-
     useEffect(() => {
         if (window.location.pathname === '/auth/v1/callback' || window.location.hash.includes('access_token')) {
             setIsCallback(true);
         }
     }, []);
-
     const { user, role, loading: authLoading, signOut } = useAuth();
     const [currentView, setCurrentView] = useState<ViewState>(ViewState.DASHBOARD);
     const [marketData, setMarketData] = useState<MarketItem[]>([]);
@@ -37,29 +33,9 @@ const App: React.FC = () => {
     const [referencePrices, setReferencePrices] = useState<Record<string, number>>({});
     const [loading, setLoading] = useState(false);
     const [language, setLanguage] = useState<Language>('en');
-
     const [isProcessingFile, setIsProcessingFile] = useState(false);
     const [dataSource, setDataSource] = useState<'NONE' | 'FILE'>('NONE');
-
-    // If we are in callback mode, ALWAYS show AuthCallback until it redirects
-    if (isCallback) {
-        return <AuthCallback />;
-    }
-
-    // Show login if not authenticated
-    if (authLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-slate-900">
-                <div className="animate-spin w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full"></div>
-            </div>
-        );
-    }
-
-    if (!user) {
-        return <Login />;
-    }
-
-    // Load Prices on Mount (Storage -> Default)
+    // Load Prices on Mount (Storage -> Default) - MUST be before conditional returns
     useEffect(() => {
         try {
             const stored = loadPricesFromStorage();
@@ -75,32 +51,41 @@ const App: React.FC = () => {
             console.error("Failed to load prices", e);
         }
     }, []);
-
+    // If we are in callback mode, ALWAYS show AuthCallback until it redirects
+    if (isCallback) {
+        return <AuthCallback />;
+    }
+    // Show login if not authenticated
+    if (authLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-slate-900">
+                <div className="animate-spin w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full"></div>
+            </div>
+        );
+    }
+    if (!user) {
+        return <Login />;
+    }
     // Wrapper to update prices AND save to storage
     const handleUpdatePrices = (newPrices: Record<string, number>) => {
         setReferencePrices(newPrices);
         savePricesToStorage(newPrices);
     };
-
     const handleFileUpload = async (file: File) => {
         // RESET STATE before processing new file to clear any "bad" cache
         setMarketData([]);
         setChartData([]);
-
         setIsProcessingFile(true);
         setLoading(true);
         try {
             // 1. Parse File
             const parsedData = await parseTradeFile(file);
-
             if (parsedData.length > 0) {
                 setMarketData(parsedData);
                 setDataSource('FILE');
-
                 // 2. Generate Charts from Real Data
                 const realCharts = generateChartDataFromHistory(parsedData);
                 setChartData(realCharts);
-
                 // Switch to market view to see the data immediately
                 setCurrentView(ViewState.MARKET);
                 alert(`Successfully imported ${parsedData.length.toLocaleString()} trade records.`);
@@ -115,10 +100,8 @@ const App: React.FC = () => {
             setLoading(false);
         }
     };
-
     const renderContent = () => {
         const t = translations[language];
-
         if (loading) {
             return (
                 <div className="flex h-[80vh] items-center justify-center flex-col gap-4">
@@ -127,7 +110,6 @@ const App: React.FC = () => {
                 </div>
             )
         }
-
         switch (currentView) {
             case ViewState.DASHBOARD:
                 return (
@@ -161,7 +143,6 @@ const App: React.FC = () => {
                                 <h2 className="text-2xl font-bold text-white mb-2">{t.appSettings}</h2>
                                 <div className="text-sm font-mono text-slate-600">v3.0.0</div>
                             </div>
-
                             <div className="space-y-6">
                                 {/* Language Switcher */}
                                 <div className="space-y-2">
@@ -184,7 +165,6 @@ const App: React.FC = () => {
                                         </button>
                                     </div>
                                 </div>
-
                                 <div className="pt-6 border-t border-slate-700 space-y-2">
                                     <div className="flex justify-between text-sm">
                                         <span>{t.dataSource}:</span>
@@ -212,14 +192,11 @@ const App: React.FC = () => {
                 );
         }
     };
-
     return (
         <div className="min-h-screen bg-slate-900 text-slate-200 font-sans">
             {/* Global News Ticker */}
             <NewsTicker />
-
             <Sidebar currentView={currentView} onNavigate={setCurrentView} language={language} />
-
             <main className="ml-64 p-8 min-h-screen transition-all duration-300 pt-16">
                 <header className="flex justify-between items-center mb-8 pb-6 border-b border-slate-800">
                     <div className="flex items-center gap-4">
@@ -238,8 +215,8 @@ const App: React.FC = () => {
                             <div className="text-sm font-medium text-white flex items-center gap-2">
                                 {user.email}
                                 <span className={`px-2 py-0.5 rounded text-xs font-mono ${role === 'admin' ? 'bg-amber-500 text-black' :
-                                        role === 'moderator' ? 'bg-purple-500 text-white' :
-                                            'bg-slate-700 text-slate-300'
+                                    role === 'moderator' ? 'bg-purple-500 text-white' :
+                                        'bg-slate-700 text-slate-300'
                                     }`}>
                                     {role}
                                 </span>
@@ -255,11 +232,9 @@ const App: React.FC = () => {
                         </button>
                     </div>
                 </header>
-
                 {renderContent()}
             </main>
         </div>
     );
 };
-
 export default App;
