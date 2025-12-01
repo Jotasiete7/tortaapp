@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { Upload, FileText, AlertCircle, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Upload, FileText, AlertCircle, CheckCircle, XCircle, Loader2, Database, Save } from 'lucide-react';
 import { processLogFile } from '../../services/logProcessing';
+import { submitLogsBatch } from '../../services/logProcessing/supabaseIngestor';
 import { CleanedLog } from '../../services/logProcessing/types';
 
 interface LogUploaderProps {
@@ -9,9 +10,12 @@ interface LogUploaderProps {
 
 export const LogUploader: React.FC<LogUploaderProps> = ({ onProcessingComplete }) => {
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
     const [stats, setStats] = useState<{ total: number; valid: number; ignored: number } | null>(null);
+    const [uploadStats, setUploadStats] = useState<{ success: number; duplicates: number; errors: number } | null>(null);
+    const [processedRecords, setProcessedRecords] = useState<CleanedLog[]>([]);
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -19,25 +23,22 @@ export const LogUploader: React.FC<LogUploaderProps> = ({ onProcessingComplete }
         if (!file) return;
 
         setIsProcessing(true);
+        setIsUploading(false);
+        setUploadStats(null);
         setError(null);
         setStats(null);
         setProgress(null);
+        setProcessedRecords([]);
 
         try {
-            // Read file content
             const text = await file.text();
 
-            // Process file
-            // Note: For very large files, we might want to chunk this.
-            // For now, processing 124MB in memory is usually fine in modern browsers,
-            // but blocking the UI is a risk.
-
-            // Using setTimeout to allow UI to update before heavy processing
             setTimeout(() => {
                 try {
                     const result = processLogFile(text, new Date());
 
                     setStats(result.stats);
+                    setProcessedRecords(result.records);
                     setIsProcessing(false);
 
                     if (onProcessingComplete) {
@@ -54,6 +55,26 @@ export const LogUploader: React.FC<LogUploaderProps> = ({ onProcessingComplete }
             console.error("File reading error:", err);
             setError("Failed to read file.");
             setIsProcessing(false);
+        }
+    };
+
+    const handleSaveToDatabase = async () => {
+        if (processedRecords.length === 0) return;
+
+        setIsUploading(true);
+        setUploadStats(null);
+
+        try {
+            const result = await submitLogsBatch(processedRecords, (current, total) => {
+                setProgress({ current, total });
+            });
+            setUploadStats(result);
+        } catch (err) {
+            console.error("Upload error:", err);
+            setError("Failed to save to database.");
+        } finally {
+            setIsUploading(false);
+            setProgress(null);
         }
     };
 
@@ -95,6 +116,16 @@ export const LogUploader: React.FC<LogUploaderProps> = ({ onProcessingComplete }
                         Upload raw Wurm Online logs (text files) to process trade data.
                     </p>
                 </div>
+                {stats && stats.valid > 0 && !uploadStats && (
+                    <button
+                        onClick={handleSaveToDatabase}
+                        disabled={isUploading}
+                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        {isUploading ? 'Saving...' : 'Save to Database'}
+                    </button>
+                )}
             </div>
 
             <div
@@ -118,7 +149,7 @@ export const LogUploader: React.FC<LogUploaderProps> = ({ onProcessingComplete }
                     onChange={onFileInputChange}
                     accept=".txt"
                     className="hidden"
-                    disabled={isProcessing}
+                    disabled={isProcessing || isUploading}
                 />
 
                 {isProcessing ? (
@@ -126,6 +157,16 @@ export const LogUploader: React.FC<LogUploaderProps> = ({ onProcessingComplete }
                         <Loader2 className="w-10 h-10 text-amber-500 animate-spin mb-4" />
                         <p className="text-slate-300 font-medium">Processing log file...</p>
                         <p className="text-xs text-slate-500 mt-2">This may take a moment for large files</p>
+                    </div>
+                ) : isUploading ? (
+                    <div className="flex flex-col items-center py-4">
+                        <Database className="w-10 h-10 text-emerald-500 animate-bounce mb-4" />
+                        <p className="text-slate-300 font-medium">Saving to Database...</p>
+                        {progress && (
+                            <p className="text-xs text-emerald-400 mt-2">
+                                {progress.current} / {progress.total} records
+                            </p>
+                        )}
                     </div>
                 ) : (
                     <div className="flex flex-col items-center py-4">
@@ -156,7 +197,7 @@ export const LogUploader: React.FC<LogUploaderProps> = ({ onProcessingComplete }
                 </div>
             )}
 
-            {stats && (
+            {stats && !uploadStats && (
                 <div className="mt-6 grid grid-cols-3 gap-4">
                     <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
                         <div className="flex items-center gap-2 mb-2">
@@ -180,6 +221,29 @@ export const LogUploader: React.FC<LogUploaderProps> = ({ onProcessingComplete }
                             <span className="text-xs font-medium text-slate-500 uppercase">Ignored</span>
                         </div>
                         <span className="text-2xl font-bold text-slate-400">{stats.ignored.toLocaleString()}</span>
+                    </div>
+                </div>
+            )}
+
+            {uploadStats && (
+                <div className="mt-6 p-4 bg-slate-800 rounded-lg border border-slate-700">
+                    <h4 className="text-white font-medium mb-3 flex items-center gap-2">
+                        <Database className="w-4 h-4 text-emerald-500" />
+                        Database Upload Results
+                    </h4>
+                    <div className="grid grid-cols-3 gap-4">
+                        <div className="p-3 bg-emerald-500/10 rounded border border-emerald-500/20">
+                            <p className="text-xs text-emerald-400 uppercase mb-1">Saved</p>
+                            <p className="text-xl font-bold text-white">{uploadStats.success}</p>
+                        </div>
+                        <div className="p-3 bg-amber-500/10 rounded border border-amber-500/20">
+                            <p className="text-xs text-amber-400 uppercase mb-1">Duplicates</p>
+                            <p className="text-xl font-bold text-white">{uploadStats.duplicates}</p>
+                        </div>
+                        <div className="p-3 bg-red-500/10 rounded border border-red-500/20">
+                            <p className="text-xs text-red-400 uppercase mb-1">Errors</p>
+                            <p className="text-xl font-bold text-white">{uploadStats.errors}</p>
+                        </div>
                     </div>
                 </div>
             )}

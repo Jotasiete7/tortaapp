@@ -1,12 +1,9 @@
 /**
  * supabaseIngestor.ts
  * Handles batch submission of cleaned logs to Supabase
-/**
- * supabaseIngestor.ts
- * Handles batch submission of cleaned logs to Supabase
  */
 
-import { supabase } from '../../supabase';
+import { supabase } from '../supabase';
 import { CleanedLog } from './types';
 
 export interface TradeLogEntry {
