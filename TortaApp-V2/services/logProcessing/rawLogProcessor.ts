@@ -38,7 +38,7 @@ export function parseRawLogLine(line: string, lineNumber: number): RawLogLine | 
         nick_raw,
         server,
         message_raw,
-        line_number
+        line_number: lineNumber
     };
 }
 
