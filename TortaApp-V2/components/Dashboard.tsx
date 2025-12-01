@@ -1,6 +1,7 @@
 
 import React, { useRef, useMemo } from 'react';
 import { ArrowUpRight, ArrowDownRight, Activity, Database, DollarSign, Cpu, Upload, Loader2 } from 'lucide-react';
+import { LogUploader } from './LogProcessor/LogUploader';
 import { MarketItem, Language } from '../types';
 import { translations } from '../services/i18n';
 
@@ -45,13 +46,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onFileUpload, isProcessing
   // Dynamic calculations based on REAL data
   const stats = useMemo(() => {
     if (!marketData || marketData.length === 0) {
-        return {
-            totalVolume: 0,
-            count: 0,
-            avgPrice: 0,
-            wtsCount: 0,
-            wtbCount: 0
-        };
+      return {
+        totalVolume: 0,
+        count: 0,
+        avgPrice: 0,
+        wtsCount: 0,
+        wtbCount: 0
+      };
     }
 
     const count = marketData.length;
@@ -61,28 +62,28 @@ export const Dashboard: React.FC<DashboardProps> = ({ onFileUpload, isProcessing
     let wtbCount = 0;
 
     marketData.forEach(item => {
-        totalVolume += item.price;
-        totalPrice += item.price;
-        if (item.orderType === 'WTS') wtsCount++;
-        if (item.orderType === 'WTB') wtbCount++;
+      totalVolume += item.price;
+      totalPrice += item.price;
+      if (item.orderType === 'WTS') wtsCount++;
+      if (item.orderType === 'WTB') wtbCount++;
     });
 
     const avgPrice = count > 0 ? totalPrice / count : 0;
 
     return {
-        totalVolume,
-        count,
-        avgPrice,
-        wtsCount,
-        wtbCount
+      totalVolume,
+      count,
+      avgPrice,
+      wtsCount,
+      wtbCount
     };
   }, [marketData]);
 
   const formatPrice = (c: number) => {
-      if (c === 0) return "0c";
-      if (c >= 10000) return `${(c/10000).toFixed(1)}g`;
-      if (c >= 100) return `${(c/100).toFixed(1)}s`;
-      return `${c.toFixed(0)}c`;
+    if (c === 0) return "0c";
+    if (c >= 10000) return `${(c / 10000).toFixed(1)}g`;
+    if (c >= 100) return `${(c / 100).toFixed(1)}s`;
+    return `${c.toFixed(0)}c`;
   }
 
   return (
@@ -99,28 +100,28 @@ export const Dashboard: React.FC<DashboardProps> = ({ onFileUpload, isProcessing
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard 
+        <StatCard
           title={t.totalVolume}
           value={formatPrice(stats.totalVolume)}
           subValue="Aggregate value of all listings"
           icon={Activity}
           color="amber"
         />
-        <StatCard 
+        <StatCard
           title={t.itemsIndexed}
-          value={stats.count.toLocaleString()} 
+          value={stats.count.toLocaleString()}
           subValue={`${stats.wtsCount} WTS / ${stats.wtbCount} WTB`}
           icon={Database}
           color="blue"
         />
-        <StatCard 
+        <StatCard
           title={t.avgPrice}
           value={formatPrice(stats.avgPrice)}
           subValue="Across all rarities"
           icon={DollarSign}
           color="emerald"
         />
-        <StatCard 
+        <StatCard
           title={t.systemStatus}
           value={marketData.length > 0 ? t.active : t.idle}
           subValue={marketData.length > 0 ? t.mlReady : t.noData}
@@ -134,21 +135,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ onFileUpload, isProcessing
           <h3 className="text-lg font-semibold text-white mb-4">{t.recentLogs}</h3>
           <div className="space-y-4">
             {marketData.length > 0 ? (
-                <>
-                    <div className="flex items-start gap-3 text-sm">
-                        <span className="text-slate-500 font-mono">NOW</span>
-                        <span className="text-emerald-400">Successfully indexed {marketData.length} records.</span>
-                    </div>
-                    <div className="flex items-start gap-3 text-sm">
-                        <span className="text-slate-500 font-mono">NOW</span>
-                        <span className="text-blue-400">Analytics Engine ready for queries.</span>
-                    </div>
-                </>
-            ) : (
+              <>
                 <div className="flex items-start gap-3 text-sm">
-                    <span className="text-slate-500 font-mono">--:--</span>
-                    <span className="text-amber-400">Waiting for user input file...</span>
+                  <span className="text-slate-500 font-mono">NOW</span>
+                  <span className="text-emerald-400">Successfully indexed {marketData.length} records.</span>
                 </div>
+                <div className="flex items-start gap-3 text-sm">
+                  <span className="text-slate-500 font-mono">NOW</span>
+                  <span className="text-blue-400">Analytics Engine ready for queries.</span>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-start gap-3 text-sm">
+                <span className="text-slate-500 font-mono">--:--</span>
+                <span className="text-amber-400">Waiting for user input file...</span>
+              </div>
             )}
           </div>
         </div>
@@ -157,15 +158,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ onFileUpload, isProcessing
           <h3 className="text-lg font-semibold text-white mb-4">{t.quickActions}</h3>
           <div className="grid grid-cols-2 gap-4">
             {/* Hidden Input */}
-            <input 
-              type="file" 
+            <input
+              type="file"
               ref={fileInputRef}
               onChange={handleFileChange}
               accept=".txt,.csv,.log"
               className="hidden"
             />
-            
-            <button 
+
+            <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isProcessing}
               className="p-4 bg-slate-700/50 hover:bg-slate-700 border border-slate-600 rounded-lg text-left transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
@@ -187,6 +188,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ onFileUpload, isProcessing
             </button>
           </div>
         </div>
+      </div>
+
+      {/* NEW: RAW Log Processor Section */}
+      <div className="mt-8">
+        <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+          <Database className="w-5 h-5 text-amber-500" />
+          Advanced Data Tools
+        </h2>
+        <LogUploader
+          onProcessingComplete={(records) => {
+            console.log("Processed RAW logs:", records);
+            // Future: Update global state or send to Supabase
+          }}
+        />
       </div>
     </div>
   );
