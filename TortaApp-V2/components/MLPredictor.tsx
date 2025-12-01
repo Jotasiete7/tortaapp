@@ -76,8 +76,8 @@ const BulkSelector: React.FC<{
                 <button
                     onClick={() => onSelect(1)}
                     className={`px-3 py-2 rounded-lg border transition-all ${selected === 1
-                            ? 'bg-purple-600 border-purple-500 text-white'
-                            : 'bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-600'
+                        ? 'bg-purple-600 border-purple-500 text-white'
+                        : 'bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-600'
                         }`}
                 >
                     Single (1x)
@@ -93,10 +93,10 @@ const BulkSelector: React.FC<{
                             key={size}
                             onClick={() => onSelect(size)}
                             className={`px-3 py-2 rounded-lg border transition-all relative group ${selected === size
-                                    ? 'bg-emerald-600 border-emerald-500 text-white'
-                                    : isBestValue
-                                        ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 hover:border-amber-500'
-                                        : 'bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-600'
+                                ? 'bg-emerald-600 border-emerald-500 text-white'
+                                : isBestValue
+                                    ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 hover:border-amber-500'
+                                    : 'bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-600'
                                 }`}
                         >
                             {size}x
@@ -230,72 +230,6 @@ export const MLPredictor: React.FC<MLPredictorProps> = ({ data }) => {
     };
 
     // Effect to update price when Bulk Selection changes
-    useMemo(() => {
-        if (!result || !bulkAnalysis) return;
-
-        // Calculate multiplier for the selected bulk
-        // If selected is 1, multiplier is 1.
-        // If selected > 1, we want to show the Total Price for that bulk.
-        // Logic: Predicted Unit Price * Bulk Size * (Optional: Bulk Multiplier logic if we wanted to be fancy)
-
-        // Simpler logic for user: Show Total Price for the batch
-        // But we can check if the specific bulk size has a discount multiplier
-        const bulkIndex = bulkAnalysis.bulkSizes.indexOf(selectedBulk);
-        const specificMultiplier = bulkIndex >= 0 ? bulkAnalysis.bulkMultipliers[bulkIndex] : 1;
-
-        // If specificMultiplier < 1 (discount), the price per unit is lower.
-        // So Adjusted Unit Price = Base Unit Price * Multiplier
-        // Total Batch Price = Adjusted Unit Price * Selected Bulk
-
-        // However, Base Unit Price comes from stats.mean which mixes singles and bulks. 
-        // Let's keep it simple: Just multiply mean by size for now, as stats.mean is the avg unit price of the market.
-        // If we want to reflect the discount, we use the multiplier.
-
-        // If the bulk analysis says this bulk size is usually 0.8x the price of singles:
-        // We should apply that factor.
-
-        // To avoid double counting if the mean already includes cheap bulks, let's just project linear first.
-        // User requested: "Calcular preços considerando o bulk selecionado"
-
-        // If I select 1000x, I want to see the price for 1000 items.
-        const multiplierFactor = selectedBulk > 1 && bulkIndex >= 0 ? specificMultiplier : 1;
-
-        // If multiplier is 1, it means no discount data or strictly linear.
-        // If multiplier is 0.5, it means bulk is half the price per unit of singles.
-
-        // Let's refine:
-        // We want to predict the fair price for THIS quantity.
-        // If market says 1000x usually sells for 0.8 * (1000 * unit_price), we should show that.
-
-        // But `stats.mean` is already the average of ALL unit prices (both bulk and single).
-        // If the dataset is dominated by bulks, the mean is already low.
-        // If dominated by singles, mean is high.
-
-        // Safe approach: Linear projection * specificMultiplier (if defined relative to singles)
-        // Actually, analyzeBulks calculates multiplier relative to Singles.
-        // So if we have singles, we can anchor on Single Price.
-
-        // Re-calculate base anchor
-        let anchorPrice = result.predictedPrice; // This is the mean of everything.
-
-        // If we have distinct multipliers, let's try to refine based on context
-        // But to avoid jumping values weirdly, let's just scale by quantity for the View.
-        // And maybe show the discount as a badge.
-
-        // UPDATED LOGIC per user prompt suggestion:
-        // "effectivePrices = ... map ... if selectedBulk > 1 ... item.price / selectedBulk"
-        // This implies filtering or adjusting.
-
-        // Let's just scale the output result for display purposes:
-        // New Price = (Original Unit Price Mean) * Quantity
-        // (Optional: Apply the specific discount factor found in analysis)
-
-        // If specificMultiplier is valid (not 1 due to missing data), we apply it to the "Single" price.
-        // But we only have "Mean" of mix.
-
-        // Simple Plan: Just Price * Qty. The user sees "Unit Price" in the stats, and "Estimated Fair Value" changes to total.
-
-    }, [selectedBulk]);
 
     // Derived display price
     const displayPrice = useMemo(() => {
