@@ -137,8 +137,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
                 <button
                     onClick={() => setActiveTab('overview')}
                     className={`pb-3 px-1 text-sm font-medium transition-colors ${activeTab === 'overview'
-                            ? 'text-amber-500 border-b-2 border-amber-500'
-                            : 'text-slate-400 hover:text-white'
+                        ? 'text-amber-500 border-b-2 border-amber-500'
+                        : 'text-slate-400 hover:text-white'
                         }`}
                 >
                     Overview & Metrics
@@ -146,8 +146,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
                 <button
                     onClick={() => setActiveTab('history')}
                     className={`pb-3 px-1 text-sm font-medium transition-colors ${activeTab === 'history'
-                            ? 'text-amber-500 border-b-2 border-amber-500'
-                            : 'text-slate-400 hover:text-white'
+                        ? 'text-amber-500 border-b-2 border-amber-500'
+                        : 'text-slate-400 hover:text-white'
                         }`}
                 >
                     Trade History
@@ -164,25 +164,57 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
                             Activity Heatmap
                         </h3>
                         <div className="h-48 flex items-end gap-1 pb-2 border-b border-slate-700/50">
-                            {activity.length > 0 ? activity.map((point, i) => {
-                                const height = Math.min(100, (point.trade_count / 50) * 100); // Normalize somewhat
-                                return (
-                                    <div key={i} className="flex-1 flex flex-col justify-end group relative">
-                                        <div
-                                            className="bg-blue-500/50 hover:bg-blue-400 transition-all rounded-t-sm min-w-[4px]"
-                                            style={{ height: `${height}%` }}
-                                        ></div>
-                                        {/* Tooltip */}
-                                        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block bg-slate-900 text-xs text-white p-2 rounded border border-slate-700 whitespace-nowrap z-20">
-                                            {new Date(point.activity_date).toLocaleDateString()}: {point.trade_count} trades
+                            {(() => {
+                                // Generate last 30 days
+                                const days = Array.from({ length: 30 }, (_, i) => {
+                                    const d = new Date();
+                                    d.setDate(d.getDate() - (29 - i));
+                                    d.setHours(0, 0, 0, 0);
+                                    return d;
+                                });
+
+                                // Map activity to days
+                                const chartData = days.map(day => {
+                                    const point = activity.find(a => {
+                                        const aDate = new Date(a.activity_date);
+                                        // Fix timezone offset issues by comparing ISO strings prefix
+                                        return aDate.toISOString().split('T')[0] === day.toISOString().split('T')[0];
+                                    });
+                                    return {
+                                        date: day,
+                                        count: point ? point.trade_count : 0
+                                    };
+                                });
+
+                                const maxCount = Math.max(...chartData.map(d => d.count), 10); // Min max scale of 10
+
+                                return chartData.map((point, i) => {
+                                    const height = Math.max(4, (point.count / maxCount) * 100); // Min height 4%
+                                    const isZero = point.count === 0;
+
+                                    return (
+                                        <div key={i} className="flex-1 flex flex-col justify-end group relative h-full">
+                                            <div
+                                                className={`
+                                                    transition-all rounded-t-sm min-w-[2px] mx-0.5
+                                                    ${isZero ? 'bg-slate-700/30 hover:bg-slate-700/50' : 'bg-blue-500 hover:bg-blue-400'}
+                                                `}
+                                                style={{ height: `${isZero ? 100 : height}%`, opacity: isZero ? 0.2 : 1 }}
+                                            ></div>
+                                            {/* Tooltip */}
+                                            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block bg-slate-900 text-xs text-white p-2 rounded border border-slate-700 whitespace-nowrap z-20 shadow-xl">
+                                                <p className="font-bold">{point.date.toLocaleDateString()}</p>
+                                                <p className="text-slate-400">{point.count} trades</p>
+                                            </div>
                                         </div>
-                                    </div>
-                                );
-                            }) : (
-                                <div className="w-full text-center text-slate-500 self-center">No activity data available</div>
-                            )}
+                                    );
+                                });
+                            })()}
                         </div>
-                        <p className="text-xs text-slate-500 mt-2 text-center">Last 30 days activity</p>
+                        <div className="flex justify-between text-xs text-slate-500 mt-2">
+                            <span>30 days ago</span>
+                            <span>Today</span>
+                        </div>
                     </div>
 
                     {/* Breakdown Card */}
@@ -195,28 +227,34 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
                             <div>
                                 <div className="flex justify-between text-sm mb-1">
                                     <span className="text-slate-300">Selling (WTS)</span>
-                                    <span className="text-white font-medium">{Math.round((stats.wts_count / stats.total) * 100)}%</span>
+                                    <span className="text-white font-medium">
+                                        {stats.total > 0 ? Math.round((stats.wts_count / stats.total) * 100) : 0}%
+                                    </span>
                                 </div>
                                 <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-                                    <div className="h-full bg-emerald-500" style={{ width: `${(stats.wts_count / stats.total) * 100}%` }}></div>
+                                    <div className="h-full bg-emerald-500" style={{ width: `${stats.total > 0 ? (stats.wts_count / stats.total) * 100 : 0}%` }}></div>
                                 </div>
                             </div>
                             <div>
                                 <div className="flex justify-between text-sm mb-1">
                                     <span className="text-slate-300">Buying (WTB)</span>
-                                    <span className="text-white font-medium">{Math.round((stats.wtb_count / stats.total) * 100)}%</span>
+                                    <span className="text-white font-medium">
+                                        {stats.total > 0 ? Math.round((stats.wtb_count / stats.total) * 100) : 0}%
+                                    </span>
                                 </div>
                                 <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-                                    <div className="h-full bg-blue-500" style={{ width: `${(stats.wtb_count / stats.total) * 100}%` }}></div>
+                                    <div className="h-full bg-blue-500" style={{ width: `${stats.total > 0 ? (stats.wtb_count / stats.total) * 100 : 0}%` }}></div>
                                 </div>
                             </div>
                             <div>
                                 <div className="flex justify-between text-sm mb-1">
                                     <span className="text-slate-300">Price Checks (PC)</span>
-                                    <span className="text-white font-medium">{Math.round((stats.pc_count / stats.total) * 100)}%</span>
+                                    <span className="text-white font-medium">
+                                        {stats.total > 0 ? Math.round((stats.pc_count / stats.total) * 100) : 0}%
+                                    </span>
                                 </div>
                                 <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-                                    <div className="h-full bg-amber-500" style={{ width: `${(stats.pc_count / stats.total) * 100}%` }}></div>
+                                    <div className="h-full bg-amber-500" style={{ width: `${stats.total > 0 ? (stats.pc_count / stats.total) * 100 : 0}%` }}></div>
                                 </div>
                             </div>
                         </div>
