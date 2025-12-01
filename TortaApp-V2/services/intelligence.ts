@@ -14,6 +14,26 @@ export interface PlayerStats {
     fav_server: string;
 }
 
+export interface PlayerStatsAdvanced extends PlayerStats {
+    pc_count: number;
+    first_seen: string;
+    last_seen: string;
+    rank_position: number;
+}
+
+export interface PlayerLog {
+    id: string;
+    trade_timestamp_utc: string;
+    trade_type: string;
+    message: string;
+    server: string;
+}
+
+export interface ActivityPoint {
+    activity_date: string;
+    trade_count: number;
+}
+
 export const IntelligenceService = {
     /**
      * Fetches the top traders based on volume.
@@ -31,7 +51,7 @@ export const IntelligenceService = {
     },
 
     /**
-     * Fetches detailed stats for a specific player.
+     * Fetches detailed stats for a specific player (Basic Version).
      */
     getPlayerStats: async (nick: string): Promise<PlayerStats | null> => {
         const { data, error } = await supabase
@@ -43,5 +63,50 @@ export const IntelligenceService = {
         }
 
         return data && data.length > 0 ? data[0] : null;
+    },
+
+    /**
+     * Fetches advanced stats for the player profile page.
+     */
+    getPlayerStatsAdvanced: async (nick: string): Promise<PlayerStatsAdvanced | null> => {
+        const { data, error } = await supabase
+            .rpc('get_player_stats_advanced', { target_nick: nick });
+
+        if (error) {
+            console.error('Error fetching advanced player stats:', error);
+            return null;
+        }
+
+        return data && data.length > 0 ? data[0] : null;
+    },
+
+    /**
+     * Fetches paginated logs for a specific player.
+     */
+    getPlayerLogs: async (nick: string, limit: number = 50, offset: number = 0): Promise<PlayerLog[]> => {
+        const { data, error } = await supabase
+            .rpc('get_player_logs', { target_nick: nick, limit_count: limit, offset_count: offset });
+
+        if (error) {
+            console.error('Error fetching player logs:', error);
+            return [];
+        }
+
+        return data || [];
+    },
+
+    /**
+     * Fetches daily activity data for charts.
+     */
+    getPlayerActivity: async (nick: string): Promise<ActivityPoint[]> => {
+        const { data, error } = await supabase
+            .rpc('get_player_activity_chart', { target_nick: nick });
+
+        if (error) {
+            console.error('Error fetching player activity:', error);
+            return [];
+        }
+
+        return data || [];
     }
 };

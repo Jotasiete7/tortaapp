@@ -2,7 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Trophy, TrendingUp, User, Activity } from 'lucide-react';
 import { IntelligenceService, TraderProfile } from '../services/intelligence';
 
-export const Leaderboard: React.FC = () => {
+interface LeaderboardProps {
+    onPlayerSelect?: (nick: string) => void;
+}
+
+export const Leaderboard: React.FC<LeaderboardProps> = ({ onPlayerSelect }) => {
     const [traders, setTraders] = useState<TraderProfile[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -43,7 +47,14 @@ export const Leaderboard: React.FC = () => {
 
             <div className="divide-y divide-slate-700/50">
                 {traders.map((trader, index) => (
-                    <div key={trader.nick} className="p-4 flex items-center justify-between hover:bg-slate-700/30 transition-colors group">
+                    <div
+                        key={trader.nick}
+                        onClick={() => onPlayerSelect && onPlayerSelect(trader.nick)}
+                        className={`
+                            p-4 flex items-center justify-between transition-colors group
+                            ${onPlayerSelect ? 'cursor-pointer hover:bg-slate-700/50' : ''}
+                        `}
+                    >
                         <div className="flex items-center gap-3">
                             <div className={`
                                 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm
@@ -55,8 +66,9 @@ export const Leaderboard: React.FC = () => {
                                 {index + 1}
                             </div>
                             <div>
-                                <p className="text-sm font-medium text-slate-200 group-hover:text-white transition-colors">
+                                <p className="text-sm font-medium text-slate-200 group-hover:text-white transition-colors flex items-center gap-2">
                                     {trader.nick.charAt(0).toUpperCase() + trader.nick.slice(1)}
+                                    {onPlayerSelect && <User className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity text-amber-500" />}
                                 </p>
                                 <p className="text-xs text-slate-500 flex items-center gap-1">
                                     <Activity className="w-3 h-3" />
