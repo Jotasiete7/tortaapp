@@ -1,4 +1,4 @@
-mport React, { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { Upload, Database, CheckCircle, XCircle, AlertCircle, Loader2, FileText } from 'lucide-react';
 import { submitBulkNDJSON } from '../../services/logProcessing/supabaseIngestor';
 export const BulkDataUploader: React.FC = () => {

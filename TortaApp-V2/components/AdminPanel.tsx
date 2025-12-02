@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase, TickerMessage } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ProtectedAdmin } from '../components/ProtectedAdmin';
-import { Megaphone, Plus, Trash2, Clock } from 'lucide-react';
+import { Megaphone, Plus, Trash2, Clock, Database } from 'lucide-react';
+import { BulkDataUploader } from '../services/logProcessing';
 
 export const AdminPanel: React.FC = () => {
     return (
@@ -14,6 +15,7 @@ export const AdminPanel: React.FC = () => {
 
 const AdminPanelContent: React.FC = () => {
     const { user } = useAuth();
+    const [activeTab, setActiveTab] = useState<'ticker' | 'upload'>('ticker');
     const [messages, setMessages] = useState<TickerMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [color, setColor] = useState<'green' | 'red' | 'yellow' | 'cyan' | 'purple'>('green');
@@ -116,13 +118,53 @@ const AdminPanelContent: React.FC = () => {
             {/* Header */}
             <div className="text-center space-y-2">
                 <div className="inline-flex p-4 bg-amber-500/10 rounded-full mb-2">
-                    <Megaphone className="w-10 h-10 text-amber-400" />
+                    {activeTab === 'ticker' ? (
+                        <Megaphone className="w-10 h-10 text-amber-400" />
+                    ) : (
+                        <Database className="w-10 h-10 text-amber-400" />
+                    )}
                 </div>
-                <h2 className="text-3xl font-bold text-white">News Ticker Admin</h2>
-                <p className="text-slate-400">Manage global news ticker messages</p>
+                <h2 className="text-3xl font-bold text-white">Admin Dashboard</h2>
+                <p className="text-slate-400">Manage application data and announcements</p>
             </div>
 
-            {/* Add Message Form */}
+            {/* Tab Navigation */}
+            <div className="flex justify-center gap-4 border-b border-slate-700 pb-1 mb-6">
+                <button
+                    onClick={() => setActiveTab('ticker')}
+                    className={`px-6 py-3 font-medium text-sm transition-all border-b-2 ${
+                        activeTab === 'ticker'
+                            ? 'border-amber-500 text-amber-500'
+                            : 'border-transparent text-slate-400 hover:text-slate-200'
+                    }`}
+                >
+                    <div className="flex items-center gap-2">
+                        <Megaphone className="w-4 h-4" />
+                        News Ticker
+                    </div>
+                </button>
+                <button
+                    onClick={() => setActiveTab('upload')}
+                    className={`px-6 py-3 font-medium text-sm transition-all border-b-2 ${
+                        activeTab === 'upload'
+                            ? 'border-amber-500 text-amber-500'
+                            : 'border-transparent text-slate-400 hover:text-slate-200'
+                    }`}
+                >
+                    <div className="flex items-center gap-2">
+                        <Database className="w-4 h-4" />
+                        Bulk Upload
+                    </div>
+                </button>
+            </div>
+
+            {activeTab === 'upload' ? (
+                <div className="animate-fade-in">
+                    <BulkDataUploader />
+                </div>
+            ) : (
+                <div className="space-y-8 animate-fade-in">
+                    {/* Add Message Form */}
             <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
                 <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
                     <Plus className="w-5 h-5 text-amber-400" />
@@ -275,6 +317,8 @@ const AdminPanelContent: React.FC = () => {
                     </div>
                 )}
             </div>
+                </div>
+            )}
         </div>
     );
 };
