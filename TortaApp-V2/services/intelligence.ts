@@ -8,8 +8,8 @@ export interface TraderProfile {
 
 export interface PlayerStats {
     nick: string;
-    wts: number;
-    wtb: number;
+    wts_count: number;
+    wtb_count: number;
     total: number;
     fav_server: string;
 }
