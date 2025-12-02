@@ -46,7 +46,8 @@ export enum ViewState {
     PREDICTOR = 'PREDICTOR',
     PRICEMANAGER = 'PRICEMANAGER',
     ADMIN = 'ADMIN',
-    SETTINGS = 'SETTINGS'
+    SETTINGS = 'SETTINGS',
+    BULK_UPLOAD = 'BULK_UPLOAD'
 }
 
 export type Language = 'en' | 'pt';
