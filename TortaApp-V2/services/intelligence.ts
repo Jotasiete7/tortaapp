@@ -132,5 +132,20 @@ export const IntelligenceService = {
         }
 
         return data || [];
+    },
+
+    /**
+     * Fetches trade logs for Trade Master view
+     */
+    getTradeLogs: async (limit: number = 5000): Promise<any[]> => {
+        const { data, error } = await supabase
+            .rpc('get_trade_logs_for_market', { limit_count: limit });
+
+        if (error) {
+            console.error('Error fetching trade logs:', error);
+            return [];
+        }
+
+        return data || [];
     }
 };

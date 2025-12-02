@@ -11,7 +11,7 @@ import { NewsTicker } from './components/NewsTicker';
 import { ProtectedAdmin } from './components/ProtectedAdmin';
 import { AuthCallback } from './components/AuthCallback';
 import { ViewState, MarketItem, ChartDataPoint, Language } from './types';
-import { parseTradeFile } from './services/fileParser';
+import { parseTradeFile, FileParser } from './services/fileParser';
 import { generateChartDataFromHistory } from './services/dataUtils';
 import { parsePriceCSV, loadPricesFromStorage, savePricesToStorage } from './services/priceUtils';
 import { DEFAULT_PRICES_CSV } from './services/defaultPrices';
@@ -19,6 +19,7 @@ import { translations } from './services/i18n';
 import { useAuth } from './contexts/AuthContext';
 import { Globe, LogOut, Shield } from 'lucide-react';
 import { IdentityService } from './services/identity';
+import { IntelligenceService } from './services/intelligence';
 
 const App: React.FC = () => {
     // Use state to lock the callback view so it doesn't unmount if hash is cleared
@@ -36,7 +37,7 @@ const App: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [language, setLanguage] = useState<Language>('en');
     const [isProcessingFile, setIsProcessingFile] = useState(false);
-    const [dataSource, setDataSource] = useState<'NONE' | 'FILE'>('NONE');
+    const [dataSource, setDataSource] = useState<'NONE' | 'FILE' | 'DATABASE'>('NONE');
 
     // Identity State
     const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
@@ -80,6 +81,73 @@ const App: React.FC = () => {
             console.error("Failed to load prices", e);
         }
     }, []);
+
+    // Load trade data from database if no file uploaded
+    useEffect(() => {
+        const loadDatabaseData = async () => {
+            // Only load from DB if no file data exists
+            if (marketData.length === 0 && dataSource === 'NONE') {
+                try {
+                    // --- MUDANÇA CRÍTICA: 5000 AQUI ---
+                    const logs = await IntelligenceService.getTradeLogs(5000);
+                    
+                    if (logs && logs.length > 0) {
+                        const converted: MarketItem[] = logs.map((log: any) => {
+                            const raw = log.message || '';
+                            let name = raw;
+                            let price = 0;
+                            
+                            // 1. Tentar extrair preço
+                            price = FileParser.normalizePrice(raw);
+                            // 2. Limpar nome (remover QL/DMG/WT e brackets)
+                            if (raw.includes('[')) {
+                                const match = raw.match(/\[(.*?)\]/);
+                                if (match) {
+                                    name = match[1];
+                                }
+                            }
+                            
+                            // 3. Limpeza Agressiva de "Lixo"
+                            name = name
+                                .replace(/QL:[\d.]+/gi, '')
+                                .replace(/DMG:[\d.]+/gi, '')
+                                .replace(/WT:[\d.]+/gi, '')
+                                .replace(/\bnull\b/gi, '')   // Remove "null"
+                                .replace(/\bcommon\b/gi, '') // Remove "common" (já tem na raridade)
+                                .replace(/\brare\b/gi, '')   // Remove "rare"
+                                .replace(/\bsupreme\b/gi, '')
+                                .replace(/\bfantastic\b/gi, '')
+                                .replace(/^[\d.]+[kx]\s*/i, '') // Remove "1k ", "10x"
+                                .replace(/\s+/g, ' ')        // Remove espaços duplos
+                                .trim();
+                            // Capitalizar primeira letra
+                            name = name.charAt(0).toUpperCase() + name.slice(1);
+                            return {
+                                id: String(log.id),
+                                name: name || 'Unknown Item',
+                                seller: log.nick || 'Unknown',
+                                price: price,
+                                quantity: 1,
+                                quality: 0,
+                                rarity: 'Common', // TODO: Extrair da string se quiser
+                                material: 'Unknown',
+                                orderType: log.trade_type || 'UNKNOWN',
+                                location: log.server || 'Unknown',
+                                timestamp: new Date(log.trade_timestamp_utc).toISOString()
+                            };
+                        });
+                        setMarketData(converted);
+                        setDataSource('DATABASE');
+                        console.log(`Loaded ${logs.length} records from database (Cleaned & Polished)`);
+                    }
+                } catch (error) {
+                    console.error('Failed to load from database:', error);
+                }
+            }
+        };
+        loadDatabaseData();
+    }, []);
+
     // If we are in callback mode, ALWAYS show AuthCallback until it redirects
     if (isCallback) {
         return <AuthCallback />;
@@ -236,6 +304,10 @@ const App: React.FC = () => {
                         {dataSource === 'FILE' ? (
                             <span className="px-3 py-1 bg-emerald-500/20 text-emerald-400 text-xs font-bold rounded-full border border-emerald-500/30 animate-fade-in">
                                 LIVE FILE DATA
+                            </span>
+                        ) : dataSource === 'DATABASE' ? (
+                            <span className="px-3 py-1 bg-blue-500/20 text-blue-400 text-xs font-bold rounded-full border border-blue-500/30 animate-fade-in">
+                                DATABASE CONNECTED
                             </span>
                         ) : (
                             <span className="px-3 py-1 bg-slate-700 text-slate-400 text-xs font-bold rounded-full border border-slate-600">
