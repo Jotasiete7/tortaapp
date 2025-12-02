@@ -1,10 +1,12 @@
 import React, { useRef, useMemo, useState } from 'react';
-import { ArrowUpRight, ArrowDownRight, Activity, Database, DollarSign, Cpu, Upload, Loader2 } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Activity, Database, DollarSign, Cpu, Upload, Loader2, Shield, ArrowLeft } from 'lucide-react';
 import { LogUploader } from './LogProcessor/LogUploader';
 import { Leaderboard } from './Leaderboard';
 import { PlayerProfile } from './PlayerProfile';
+import { NickVerification } from './NickVerification';
 import { MarketItem, Language } from '../types';
 import { translations } from '../services/i18n';
+import { IntelligenceService, GlobalStats } from '../services/intelligence';
 
 interface StatCardProps {
     title: string;
@@ -19,6 +21,8 @@ interface DashboardProps {
     isProcessing: boolean;
     marketData: MarketItem[];
     language: Language;
+    selectedPlayer: string | null;
+    onPlayerSelect: (player: string | null) => void;
 }
 
 const StatCard: React.FC<StatCardProps> = ({ title, value, subValue, icon: Icon, color }) => (
@@ -34,10 +38,27 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, subValue, icon: Icon,
     </div>
 );
 
-export const Dashboard: React.FC<DashboardProps> = ({ onFileUpload, isProcessing, marketData, language }) => {
+export const Dashboard: React.FC<DashboardProps> = ({
+    onFileUpload,
+    isProcessing,
+    marketData,
+    language,
+    selectedPlayer,
+    onPlayerSelect
+}) => {
     const t = translations[language];
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
+    const [showIdentity, setShowIdentity] = useState(false);
+    const [globalStats, setGlobalStats] = useState<GlobalStats | null>(null);
+
+    // Fetch global stats on mount
+    React.useEffect(() => {
+        const fetchStats = async () => {
+            const stats = await IntelligenceService.getGlobalStats();
+            setGlobalStats(stats);
+        };
+        fetchStats();
+    }, []);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -45,41 +66,57 @@ export const Dashboard: React.FC<DashboardProps> = ({ onFileUpload, isProcessing
         }
     };
 
-    // Dynamic calculations based on REAL data
+    // Dynamic calculations based on REAL data OR Global Stats
     const stats = useMemo(() => {
-        if (!marketData || marketData.length === 0) {
+        // Priority: Local File Data
+        if (marketData && marketData.length > 0) {
+            const count = marketData.length;
+            let totalVolume = 0;
+            let totalPrice = 0;
+            let wtsCount = 0;
+            let wtbCount = 0;
+
+            marketData.forEach(item => {
+                totalVolume += item.price;
+                totalPrice += item.price;
+                if (item.orderType === 'WTS') wtsCount++;
+                if (item.orderType === 'WTB') wtbCount++;
+            });
+
+            const avgPrice = count > 0 ? totalPrice / count : 0;
+
             return {
-                totalVolume: 0,
-                count: 0,
-                avgPrice: 0,
-                wtsCount: 0,
-                wtbCount: 0
+                totalVolume,
+                count,
+                avgPrice,
+                wtsCount,
+                wtbCount,
+                source: 'FILE'
             };
         }
 
-        const count = marketData.length;
-        let totalVolume = 0;
-        let totalPrice = 0;
-        let wtsCount = 0;
-        let wtbCount = 0;
+        // Fallback: Global DB Stats
+        if (globalStats) {
+            return {
+                totalVolume: globalStats.total_volume,
+                count: globalStats.items_indexed,
+                avgPrice: globalStats.avg_price,
+                wtsCount: globalStats.wts_count,
+                wtbCount: globalStats.wtb_count,
+                source: 'DB'
+            };
+        }
 
-        marketData.forEach(item => {
-            totalVolume += item.price;
-            totalPrice += item.price;
-            if (item.orderType === 'WTS') wtsCount++;
-            if (item.orderType === 'WTB') wtbCount++;
-        });
-
-        const avgPrice = count > 0 ? totalPrice / count : 0;
-
+        // Default: Empty
         return {
-            totalVolume,
-            count,
-            avgPrice,
-            wtsCount,
-            wtbCount
+            totalVolume: 0,
+            count: 0,
+            avgPrice: 0,
+            wtsCount: 0,
+            wtbCount: 0,
+            source: 'NONE'
         };
-    }, [marketData]);
+    }, [marketData, globalStats]);
 
     const formatPrice = (c: number) => {
         if (c === 0) return "0c";
@@ -93,8 +130,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ onFileUpload, isProcessing
         return (
             <PlayerProfile
                 nick={selectedPlayer}
-                onBack={() => setSelectedPlayer(null)}
+                onBack={() => onPlayerSelect(null)}
             />
+        );
+    }
+
+    // If identity verification is active
+    if (showIdentity) {
+        return (
+            <div className="space-y-6 animate-fade-in">
+                <button
+                    onClick={() => setShowIdentity(false)}
+                    className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-2"
+                >
+                    <ArrowLeft className="w-4 h-4" />
+                    Back to Dashboard
+                </button>
+                <NickVerification onSelectProfile={onPlayerSelect} />
+            </div>
         );
     }
 
@@ -105,9 +158,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ onFileUpload, isProcessing
                     <h1 className="text-2xl font-bold text-white">{t.dashboardOverview}</h1>
                     <p className="text-slate-400 mt-1">{t.realTimeStats}</p>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-slate-400 bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700">
-                    <span className={`w-2 h-2 rounded-full ${marketData.length > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-slate-500'}`}></span>
-                    {marketData.length > 0 ? t.dataLoaded : t.awaitingData}
+                <div className="flex gap-4">
+                    <button
+                        onClick={() => setShowIdentity(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 rounded-lg transition-colors"
+                    >
+                        <Shield className="w-4 h-4" />
+                        Link Identity
+                    </button>
+                    <div className="flex items-center gap-2 text-sm text-slate-400 bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700">
+                        <span className={`w-2 h-2 rounded-full ${stats.count > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-slate-500'}`}></span>
+                        {stats.source === 'FILE' ? 'Live File Data' : stats.source === 'DB' ? 'Database Connected' : t.awaitingData}
+                    </div>
                 </div>
             </div>
 
@@ -135,8 +197,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onFileUpload, isProcessing
                 />
                 <StatCard
                     title={t.systemStatus}
-                    value={marketData.length > 0 ? t.active : t.idle}
-                    subValue={marketData.length > 0 ? t.mlReady : t.noData}
+                    value={stats.count > 0 ? t.active : t.idle}
+                    subValue={stats.source === 'DB' ? 'Serving from Cloud' : marketData.length > 0 ? t.mlReady : t.noData}
                     icon={Cpu}
                     color="purple"
                 />
@@ -221,7 +283,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onFileUpload, isProcessing
                         <Activity className="w-5 h-5 text-emerald-500" />
                         Market Intelligence
                     </h2>
-                    <Leaderboard onPlayerSelect={setSelectedPlayer} />
+                    <Leaderboard onPlayerSelect={onPlayerSelect} />
                 </div>
             </div>
         </div>

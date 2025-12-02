@@ -18,6 +18,8 @@ import { DEFAULT_PRICES_CSV } from './services/defaultPrices';
 import { translations } from './services/i18n';
 import { useAuth } from './contexts/AuthContext';
 import { Globe, LogOut, Shield } from 'lucide-react';
+import { IdentityService } from './services/identity';
+
 const App: React.FC = () => {
     // Use state to lock the callback view so it doesn't unmount if hash is cleared
     const [isCallback, setIsCallback] = useState(false);
@@ -35,6 +37,33 @@ const App: React.FC = () => {
     const [language, setLanguage] = useState<Language>('en');
     const [isProcessingFile, setIsProcessingFile] = useState(false);
     const [dataSource, setDataSource] = useState<'NONE' | 'FILE'>('NONE');
+
+    // Identity State
+    const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
+    const [myVerifiedNick, setMyVerifiedNick] = useState<string | null>(null);
+
+    // Fetch verified nick on mount
+    useEffect(() => {
+        const fetchIdentity = async () => {
+            if (!user) return;
+            const nicks = await IdentityService.getMyNicks();
+            const verified = nicks.find(n => n.is_verified);
+            if (verified) {
+                setMyVerifiedNick(verified.game_nick);
+            }
+        };
+        fetchIdentity();
+    }, [user]);
+
+    const handleHeaderProfileClick = () => {
+        if (myVerifiedNick) {
+            setSelectedPlayer(myVerifiedNick);
+            setCurrentView(ViewState.DASHBOARD);
+        } else {
+            setCurrentView(ViewState.DASHBOARD);
+        }
+    };
+
     // Load Prices on Mount (Storage -> Default) - MUST be before conditional returns
     useEffect(() => {
         try {
@@ -118,6 +147,8 @@ const App: React.FC = () => {
                         isProcessing={isProcessingFile}
                         marketData={marketData}
                         language={language}
+                        selectedPlayer={selectedPlayer}
+                        onPlayerSelect={setSelectedPlayer}
                     />
                 );
             case ViewState.MARKET:
@@ -188,6 +219,8 @@ const App: React.FC = () => {
                         isProcessing={isProcessingFile}
                         marketData={marketData}
                         language={language}
+                        selectedPlayer={selectedPlayer}
+                        onPlayerSelect={setSelectedPlayer}
                     />
                 );
         }
@@ -211,8 +244,8 @@ const App: React.FC = () => {
                         )}
                     </div>
                     <div className="flex items-center gap-4">
-                        <div className="text-right hidden sm:block">
-                            <div className="text-sm font-medium text-white flex items-center gap-2">
+                        <div className="text-right hidden sm:block cursor-pointer hover:opacity-80 transition-opacity" onClick={handleHeaderProfileClick}>
+                            <div className="text-sm font-medium text-white flex items-center gap-2 justify-end">
                                 {user.email}
                                 <span className={`px-2 py-0.5 rounded text-xs font-mono ${role === 'admin' ? 'bg-amber-500 text-black' :
                                     role === 'moderator' ? 'bg-purple-500 text-white' :
@@ -221,7 +254,15 @@ const App: React.FC = () => {
                                     {role}
                                 </span>
                             </div>
-                            <div className="text-xs text-slate-400">WurmForge v3.0</div>
+                            <div className="text-xs text-slate-400 flex items-center gap-1 justify-end">
+                                {myVerifiedNick ? (
+                                    <span className="text-emerald-400 flex items-center gap-1">
+                                        <Shield className="w-3 h-3" /> {myVerifiedNick}
+                                    </span>
+                                ) : (
+                                    <span>WurmForge v3.0</span>
+                                )}
+                            </div>
                         </div>
                         <button
                             onClick={signOut}

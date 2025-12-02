@@ -34,7 +34,31 @@ export interface ActivityPoint {
     trade_count: number;
 }
 
+export interface GlobalStats {
+    total_volume: number;
+    items_indexed: number;
+    avg_price: number;
+    wts_count: number;
+    wtb_count: number;
+}
+
 export const IntelligenceService = {
+    /**
+     * Fetches global stats for the dashboard.
+     */
+    getGlobalStats: async (): Promise<GlobalStats | null> => {
+        const { data, error } = await supabase
+            .rpc('get_global_stats');
+
+        if (error) {
+            console.error('Error fetching global stats:', error);
+            return null;
+        }
+
+        // RPC returns an array of objects, we expect one row
+        return data && data.length > 0 ? data[0] : null;
+    },
+
     /**
      * Fetches the top traders based on volume.
      */

@@ -68,6 +68,10 @@ export function processLogLine(
     if (trade_match) {
         trade_type = trade_match[1].toUpperCase() as CleanedLog['trade_type'];
         message_trimmed = message_trimmed.substring(trade_match[0].length).trim();
+    } else if (message_trimmed.startsWith('@TORTA-')) {
+        // Verification Token detected!
+        // Assign 'PC' type to pass filters, but the trigger will catch the token content.
+        trade_type = 'PC';
     } else if (message_trimmed.startsWith('@')) {
         // Reply messages (e.g., @nick thanks) - ignore
         return null;
@@ -77,10 +81,12 @@ export function processLogLine(
     }
 
     // 4. Clean message
-    // Remove @tortaapp verification codes
-    message_trimmed = message_trimmed
-        .replace(/@tortaapp\s+\d+/gi, '')
-        .trim();
+    // Remove OLD @tortaapp verification codes if any, but KEEP the new @TORTA- token
+    if (!message_trimmed.startsWith('@TORTA-')) {
+        message_trimmed = message_trimmed
+            .replace(/@tortaapp\s+\d+/gi, '')
+            .trim();
+    }
 
     // 5. Normalize for hashing
     const message_normalized = normalizeText(message_trimmed);
