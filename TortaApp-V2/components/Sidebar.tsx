@@ -74,6 +74,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, langu
                             <Shield className={`w-5 h-5 ${currentView === ViewState.ADMIN ? 'text-purple-400' : 'text-slate-500 group-hover:text-slate-300'}`} />
                             <span className="font-medium">Admin Panel</span>
                         </button>
+                        <button
+                            onClick={() => onNavigate(ViewState.PRICEMANAGER)}
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group ${currentView === ViewState.PRICEMANAGER
+                                ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20 shadow-sm'
+                                : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
+                                }`}
+                        >
+                            <BadgeDollarSign className={`w-5 h-5 ${currentView === ViewState.PRICEMANAGER ? 'text-purple-400' : 'text-slate-500 group-hover:text-slate-300'}`} />
+                            <span className="font-medium">Price Manager</span>
+                        </button>
                     </>
                 )}
             </nav>

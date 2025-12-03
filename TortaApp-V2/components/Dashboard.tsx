@@ -26,7 +26,7 @@ interface DashboardProps {
 }
 
 const StatCard: React.FC<StatCardProps> = ({ title, value, subValue, icon: Icon, color }) => (
-    <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 hover:border-slate-600 transition-colors">
+    <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 hover:border-slate-600 transition-colors">
         <div className="flex justify-between items-start mb-4">
             <div className={`p-3 rounded-lg bg-${color}-500/10`}>
                 <Icon className={`w-6 h-6 text-${color}-500`} />
@@ -173,7 +173,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
                     title={t.totalVolume}
                     value={formatPrice(stats.totalVolume)}
@@ -204,8 +204,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
                     <h3 className="text-lg font-semibold text-white mb-4">{t.recentLogs}</h3>
                     <div className="space-y-4">
                         {marketData.length > 0 ? (
@@ -228,7 +228,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     </div>
                 </div>
 
-                <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
+                <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
                     <h3 className="text-lg font-semibold text-white mb-4">{t.quickActions}</h3>
                     <div className="grid grid-cols-2 gap-4">
                         {/* Hidden Input */}

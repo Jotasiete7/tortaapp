@@ -106,7 +106,15 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
                         <div className="flex flex-wrap gap-4 text-sm text-slate-400">
                             <div className="flex items-center gap-1">
                                 <ServerIcon server={stats.fav_server || 'Unknown'} className="text-base" />
-                                <span className="font-bold ml-1">{stats.fav_server || 'Unknown'}</span>
+                                <span className="font-bold ml-1">
+                                    {(() => {
+                                        const s = (stats.fav_server || '').toLowerCase();
+                                        if (s.includes('har')) return 'Harmony';
+                                        if (s.includes('mel')) return 'Melody';
+                                        if (s.includes('cad')) return 'Cadence';
+                                        return stats.fav_server || 'Unknown';
+                                    })()}
+                                </span>
                             </div>
                             <div className="flex items-center gap-1">
                                 <Hash className="w-4 h-4 text-slate-500" />

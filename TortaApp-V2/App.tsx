@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
 import { MarketTable } from './components/MarketTable';
@@ -93,7 +93,7 @@ const App: React.FC = () => {
                         return;
                     }
                     
-                    console.log('🔍 DIRECT CALL: Supabase retornou', logs?.length || 0, 'logs');
+                    console.log('?? DIRECT CALL: Supabase retornou', logs?.length || 0, 'logs');
                     
                     if (logs && logs.length > 0) {
                         const converted: MarketItem[] = logs.map((log: any) => {
@@ -139,7 +139,7 @@ const App: React.FC = () => {
                         });
                         setMarketData(converted);
                         setDataSource('DATABASE');
-                        console.log(`✅ Loaded ${logs.length} records from database (Cleaned & Polished)`);
+                        console.log(`? Loaded ${logs.length} records from database (Cleaned & Polished)`);
                     }
                 } catch (error) {
                     console.error('Failed to load from database:', error);
@@ -260,7 +260,7 @@ const App: React.FC = () => {
                                             onClick={() => setLanguage('pt')}
                                             className={`py-2 text-sm font-medium rounded-md transition-all ${language === 'pt' ? 'bg-amber-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
                                         >
-                                            Português
+                                            Portugu�s
                                         </button>
                                     </div>
                                 </div>
@@ -320,7 +320,7 @@ const App: React.FC = () => {
                             <div className="flex flex-col items-end">
                                 {/* Nick Display - Larger & Prominent */}
                                 {myVerifiedNick ? (
-                                    <div className="text-lg font-bold text-white flex items-center gap-2">
+                                    <div className="text-2xl font-bold text-white flex items-center gap-2">
                                         <span className="text-emerald-400 flex items-center gap-1">
                                             <Shield className="w-4 h-4" /> {myVerifiedNick}
                                         </span>
@@ -336,8 +336,8 @@ const App: React.FC = () => {
                                 )}
 
                                 {/* Email Display - Hidden by default with Toggle */}
-                                <div className="flex items-center gap-2 mt-1">
-                                    <span className="text-xs text-slate-500">
+                                <div className="flex items-center gap-2 mt-1 bg-slate-800/50 px-2 py-1 rounded border border-slate-700/50">
+                                    <span className="text-xs text-slate-400 font-mono tracking-wide">
                                         {showEmail ? user.email : '••••••••••••••••'}
                                     </span>
                                     <button
