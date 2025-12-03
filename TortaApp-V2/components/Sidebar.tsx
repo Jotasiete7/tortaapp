@@ -1,4 +1,4 @@
-
+﻿
 import React from 'react';
 import { LayoutDashboard, ShoppingCart, BarChart2, BrainCircuit, Settings, BadgeDollarSign, Shield } from 'lucide-react';
 import { ViewState, Language } from '../types';
@@ -20,7 +20,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, langu
         { id: ViewState.MARKET, label: t.tradeMaster, icon: ShoppingCart },
         { id: ViewState.ANALYTICS, label: t.chartsEngine, icon: BarChart2 },
         { id: ViewState.PREDICTOR, label: t.mlPredictor, icon: BrainCircuit },
-        { id: ViewState.PRICEMANAGER, label: t.priceManager, icon: BadgeDollarSign },
     ];
 
     const isAdmin = role === 'admin' || role === 'moderator';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
 import { MarketTable } from './components/MarketTable';
@@ -17,7 +17,7 @@ import { parsePriceCSV, loadPricesFromStorage, savePricesToStorage } from './ser
 import { DEFAULT_PRICES_CSV } from './services/defaultPrices';
 import { translations } from './services/i18n';
 import { useAuth } from './contexts/AuthContext';
-import { Globe, LogOut, Shield } from 'lucide-react';
+import { Globe, LogOut, Shield, Eye, EyeOff } from 'lucide-react';
 import { IdentityService } from './services/identity';
 import { supabase } from './services/supabase';
 const App: React.FC = () => {
@@ -40,6 +40,7 @@ const App: React.FC = () => {
     // Identity State
     const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
     const [myVerifiedNick, setMyVerifiedNick] = useState<string | null>(null);
+    const [showEmail, setShowEmail] = useState(false);
     // Fetch verified nick on mount
     useEffect(() => {
         const fetchIdentity = async () => {
@@ -316,23 +317,40 @@ const App: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-4">
                         <div className="text-right hidden sm:block cursor-pointer hover:opacity-80 transition-opacity" onClick={handleHeaderProfileClick}>
-                            <div className="text-sm font-medium text-white flex items-center gap-2 justify-end">
-                                {user.email}
-                                <span className={`px-2 py-0.5 rounded text-xs font-mono ${role === 'admin' ? 'bg-amber-500 text-black' :
-                                    role === 'moderator' ? 'bg-purple-500 text-white' :
-                                        'bg-slate-700 text-slate-300'
-                                    }`}>
-                                    {role}
-                                </span>
-                            </div>
-                            <div className="text-xs text-slate-400 flex items-center gap-1 justify-end">
+                            <div className="flex flex-col items-end">
+                                {/* Nick Display - Larger & Prominent */}
                                 {myVerifiedNick ? (
-                                    <span className="text-emerald-400 flex items-center gap-1">
-                                        <Shield className="w-3 h-3" /> {myVerifiedNick}
-                                    </span>
+                                    <div className="text-lg font-bold text-white flex items-center gap-2">
+                                        <span className="text-emerald-400 flex items-center gap-1">
+                                            <Shield className="w-4 h-4" /> {myVerifiedNick}
+                                        </span>
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider ${role === 'admin' ? 'bg-amber-500 text-black' :
+                                            role === 'moderator' ? 'bg-purple-500 text-white' :
+                                                'bg-slate-700 text-slate-300'
+                                            }`}>
+                                            {role}
+                                        </span>
+                                    </div>
                                 ) : (
-                                    <span>WurmForge v3.0</span>
+                                    <div className="text-lg font-bold text-slate-400">Guest User</div>
                                 )}
+
+                                {/* Email Display - Hidden by default with Toggle */}
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-xs text-slate-500">
+                                        {showEmail ? user.email : '••••••••••••••••'}
+                                    </span>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowEmail(!showEmail);
+                                        }}
+                                        className="text-slate-600 hover:text-slate-400 transition-colors"
+                                        title={showEmail ? "Hide Email" : "Show Email"}
+                                    >
+                                        {showEmail ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <button

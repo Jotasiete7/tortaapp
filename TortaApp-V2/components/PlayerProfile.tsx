@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
     Trophy, TrendingUp, User, Activity, Calendar,
     ShoppingCart, Tag, Hash, Clock, ArrowLeft, Server
