@@ -1,4 +1,9 @@
-﻿import React from 'react';
+﻿# -*- coding: utf-8 -*-
+import os
+
+path = r"C:\Users\Pichau\.gemini\antigravity\brain\74e19e36-8c67-453a-a689-6e4ab79920f3\Torta app\TortaApp-V2\components\ServerIcon.tsx"
+
+content = """import React from 'react';
 
 interface ServerIconProps {
     server: string;
@@ -33,3 +38,11 @@ export const ServerIcon: React.FC<ServerIconProps> = ({ server, className = '' }
         </span>
     );
 };
+"""
+
+try:
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(content)
+    print("ServerIcon.tsx written successfully.")
+except Exception as e:
+    print(f"Error writing ServerIcon.tsx: {e}")

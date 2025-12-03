@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
 import { MarketTable } from './components/MarketTable';
@@ -17,7 +17,7 @@ import { parsePriceCSV, loadPricesFromStorage, savePricesToStorage } from './ser
 import { DEFAULT_PRICES_CSV } from './services/defaultPrices';
 import { translations } from './services/i18n';
 import { useAuth } from './contexts/AuthContext';
-import { Globe, LogOut, Shield, Eye, EyeOff } from 'lucide-react';
+import { Globe, LogOut, Shield, Eye, EyeOff, User } from 'lucide-react';
 import { IdentityService } from './services/identity';
 import { supabase } from './services/supabase';
 const App: React.FC = () => {
@@ -260,10 +260,30 @@ const App: React.FC = () => {
                                             onClick={() => setLanguage('pt')}
                                             className={`py-2 text-sm font-medium rounded-md transition-all ${language === 'pt' ? 'bg-amber-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
                                         >
-                                            Portugu�s
+                                            Português
                                         </button>
                                     </div>
                                 </div>
+                                  {/* Contact Info */}
+                                  <div className="space-y-2 pt-4 border-t border-slate-700/50">
+                                      <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                                          <User className="w-4 h-4 text-emerald-500" />
+                                          Developer Contact
+                                      </label>
+                                      <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50 space-y-3">
+                                          <div className="flex items-center justify-between text-sm">
+                                              <span className="text-slate-400">Email:</span>
+                                              <span className="text-white font-mono select-all">tortadev@gmail.com</span>
+                                          </div>
+                                          <div className="flex items-center justify-between text-sm">
+                                              <span className="text-slate-400">In-game Nick:</span>
+                                              <span className="text-amber-400 font-bold">Jotasiete</span>
+                                          </div>
+                                          <p className="text-xs text-slate-500 mt-2 italic">
+                                              Report bugs or send feedback directly.
+                                          </p>
+                                      </div>
+                                  </div>
                                 <div className="pt-6 border-t border-slate-700 space-y-2">
                                     <div className="flex justify-between text-sm">
                                         <span>{t.dataSource}:</span>
