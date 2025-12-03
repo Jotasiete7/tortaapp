@@ -1,89 +1,173 @@
-import React, { useEffect, useState } from 'react';
-import { Trophy, TrendingUp, User, Activity } from 'lucide-react';
-import { IntelligenceService, TraderProfile } from '../services/intelligence';
+import React, { useState, useEffect } from 'react';
+import { Trophy, ShoppingBag, ShoppingCart, Search, Calendar, ChevronDown } from 'lucide-react';
+import { RankingsService, MostActiveTrader, ActiveSeller, ActiveBuyer, PriceChecker, TimePeriod } from '../services/rankings';
 
-interface LeaderboardProps {
-    onPlayerSelect?: (nick: string) => void;
-}
+// ==================== SUB-COMPONENTS ====================
 
-export const Leaderboard: React.FC<LeaderboardProps> = ({ onPlayerSelect }) => {
-    const [traders, setTraders] = useState<TraderProfile[]>([]);
+const RankingCard = ({ title, icon: Icon, children, color }: any) => (
+    <div className={`bg-slate-800 border border-slate-700 rounded-xl p-6 flex flex-col h-full`}>
+        <div className="flex items-center gap-3 mb-6">
+            <div className={`p-3 rounded-lg bg-${color}-500/10`}>
+                <Icon className={`w-6 h-6 text-${color}-500`} />
+            </div>
+            <h3 className="text-lg font-bold text-white">{title}</h3>
+        </div>
+        <div className="flex-1 space-y-3">
+            {children}
+        </div>
+    </div>
+);
+
+const RankItem = ({ rank, nick, value, subValue, badge }: any) => (
+    <div className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg border border-slate-800 hover:border-slate-700 transition-colors">
+        <div className="flex items-center gap-3">
+            <div className={`
+                w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm
+                ${rank === 1 ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/50' :
+                    rank === 2 ? 'bg-slate-400/20 text-slate-400 border border-slate-400/50' :
+                        rank === 3 ? 'bg-amber-700/20 text-amber-700 border border-amber-700/50' :
+                            'bg-slate-800 text-slate-500'}
+            `}>
+                {rank}
+            </div>
+            <div>
+                <span className="text-white font-medium block">{nick}</span>
+                {badge && <span className="text-xs text-slate-500">{badge}</span>}
+            </div>
+        </div>
+        <div className="text-right">
+            <span className="block text-white font-bold">{value}</span>
+            {subValue && <span className="text-xs text-slate-500">{subValue}</span>}
+        </div>
+    </div>
+);
+
+// ==================== MAIN COMPONENT ====================
+
+export const Leaderboard = () => {
+    const [activeTraders, setActiveTraders] = useState<MostActiveTrader[]>([]);
+    const [activeSellers, setActiveSellers] = useState<ActiveSeller[]>([]);
+    const [activeBuyers, setActiveBuyers] = useState<ActiveBuyer[]>([]);
+    const [priceCheckers, setPriceCheckers] = useState<PriceChecker[]>([]);
     const [loading, setLoading] = useState(true);
+    const [period, setPeriod] = useState<TimePeriod>('all_time');
 
     useEffect(() => {
-        loadLeaderboard();
-    }, []);
+        loadRankings();
+    }, [period]);
 
-    const loadLeaderboard = async () => {
+    const loadRankings = async () => {
+        setLoading(true);
         try {
-            const data = await IntelligenceService.getTopTraders(5);
-            setTraders(data);
+            const [traders, sellers, buyers, checkers] = await Promise.all([
+                RankingsService.getMostActiveTraders(5, period),
+                RankingsService.getMostActiveSellers(5),
+                RankingsService.getMostActiveBuyers(5),
+                RankingsService.getTopPriceCheckers(5)
+            ]);
+
+            setActiveTraders(traders);
+            setActiveSellers(sellers);
+            setActiveBuyers(buyers);
+            setPriceCheckers(checkers);
         } catch (error) {
-            console.error("Failed to load leaderboard", error);
+            console.error("Failed to load rankings", error);
         } finally {
             setLoading(false);
         }
     };
 
     if (loading) {
-        return <div className="p-4 text-slate-400 text-sm animate-pulse">Loading market intelligence...</div>;
-    }
-
-    if (traders.length === 0) {
-        return <div className="p-4 text-slate-500 text-sm">No market data available yet. Upload logs to see rankings.</div>;
+        return <div className="text-center py-12 text-slate-500">Loading rankings...</div>;
     }
 
     return (
-        <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
-            <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-900/50">
-                <h3 className="font-bold text-white flex items-center gap-2">
-                    <Trophy className="w-4 h-4 text-amber-500" />
-                    Top Market Movers
-                </h3>
-                <span className="text-xs text-slate-500 bg-slate-800 px-2 py-1 rounded border border-slate-700">
-                    Live Data
-                </span>
+        <div className="space-y-8 animate-fade-in">
+            {/* Header & Filters */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                        <Trophy className="w-6 h-6 text-yellow-500" />
+                        Market Leaderboards
+                    </h2>
+                    <p className="text-slate-400">Top traders and community contributors</p>
+                </div>
+
+                <div className="flex items-center gap-2 bg-slate-800 p-1 rounded-lg border border-slate-700">
+                    {(['all_time', 'monthly', 'weekly'] as TimePeriod[]).map((p) => (
+                        <button
+                            key={p}
+                            onClick={() => setPeriod(p)}
+                            className={`
+                                px-3 py-1.5 rounded-md text-sm font-medium transition-colors capitalize
+                                ${period === p ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}
+                            `}
+                        >
+                            {p.replace('_', ' ')}
+                        </button>
+                    ))}
+                </div>
             </div>
 
-            <div className="divide-y divide-slate-700/50">
-                {traders.map((trader, index) => (
-                    <div
-                        key={trader.nick}
-                        onClick={() => onPlayerSelect && onPlayerSelect(trader.nick)}
-                        className={`
-                            p-4 flex items-center justify-between transition-colors group
-                            ${onPlayerSelect ? 'cursor-pointer hover:bg-slate-700/50' : ''}
-                        `}
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className={`
-                                w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm
-                                ${index === 0 ? 'bg-amber-500/20 text-amber-500 border border-amber-500/50' :
-                                    index === 1 ? 'bg-slate-400/20 text-slate-300 border border-slate-400/50' :
-                                        index === 2 ? 'bg-orange-700/20 text-orange-400 border border-orange-700/50' :
-                                            'bg-slate-800 text-slate-500'}
-                            `}>
-                                {index + 1}
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-slate-200 group-hover:text-white transition-colors flex items-center gap-2">
-                                    {trader.nick.charAt(0).toUpperCase() + trader.nick.slice(1)}
-                                    {onPlayerSelect && <User className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity text-amber-500" />}
-                                </p>
-                                <p className="text-xs text-slate-500 flex items-center gap-1">
-                                    <Activity className="w-3 h-3" />
-                                    Last seen {new Date(trader.last_seen).toLocaleDateString()}
-                                </p>
-                            </div>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-sm font-bold text-emerald-400">
-                                {trader.total_trades.toLocaleString()}
-                            </p>
-                            <p className="text-[10px] text-slate-500 uppercase tracking-wider">Trades</p>
-                        </div>
-                    </div>
-                ))}
+            {/* Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+                {/* 1. Most Active Traders */}
+                <RankingCard title="Most Active Traders" icon={Trophy} color="yellow">
+                    {activeTraders.map((t) => (
+                        <RankItem
+                            key={t.nick}
+                            rank={t.rank}
+                            nick={t.nick}
+                            value={t.wts_count}
+                            subValue="WTS Posts"
+                            badge="🔥 Trader"
+                        />
+                    ))}
+                </RankingCard>
+
+                {/* 2. Top Sellers */}
+                <RankingCard title="Top Sellers (Month)" icon={ShoppingBag} color="emerald">
+                    {activeSellers.map((s) => (
+                        <RankItem
+                            key={s.nick}
+                            rank={s.rank}
+                            nick={s.nick}
+                            value={s.wts_count}
+                            subValue="Listings"
+                            badge="📦 Merchant"
+                        />
+                    ))}
+                </RankingCard>
+
+                {/* 3. Top Buyers */}
+                <RankingCard title="Top Buyers (Month)" icon={ShoppingCart} color="blue">
+                    {activeBuyers.map((b) => (
+                        <RankItem
+                            key={b.nick}
+                            rank={b.rank}
+                            nick={b.nick}
+                            value={b.wtb_count}
+                            subValue="Requests"
+                            badge="💰 Investor"
+                        />
+                    ))}
+                </RankingCard>
+
+                {/* 4. Price Checkers */}
+                <RankingCard title="Top Appraisers (Week)" icon={Search} color="purple">
+                    {priceCheckers.map((pc) => (
+                        <RankItem
+                            key={pc.nick}
+                            rank={pc.rank}
+                            nick={pc.nick}
+                            value={pc.pc_count}
+                            subValue="Checks"
+                            badge="🔍 Expert"
+                        />
+                    ))}
+                </RankingCard>
+
             </div>
         </div>
     );

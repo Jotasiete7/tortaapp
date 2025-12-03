@@ -283,7 +283,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         <Activity className="w-5 h-5 text-emerald-500" />
                         Market Intelligence
                     </h2>
-                    <Leaderboard onPlayerSelect={onPlayerSelect} />
+                    <Leaderboard />
                 </div>
             </div>
         </div>
