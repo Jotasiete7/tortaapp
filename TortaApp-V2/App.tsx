@@ -19,8 +19,7 @@ import { translations } from './services/i18n';
 import { useAuth } from './contexts/AuthContext';
 import { Globe, LogOut, Shield } from 'lucide-react';
 import { IdentityService } from './services/identity';
-import { IntelligenceService } from './services/intelligence';
-
+import { supabase } from './services/supabase';
 const App: React.FC = () => {
     // Use state to lock the callback view so it doesn't unmount if hash is cleared
     const [isCallback, setIsCallback] = useState(false);
@@ -38,11 +37,9 @@ const App: React.FC = () => {
     const [language, setLanguage] = useState<Language>('en');
     const [isProcessingFile, setIsProcessingFile] = useState(false);
     const [dataSource, setDataSource] = useState<'NONE' | 'FILE' | 'DATABASE'>('NONE');
-
     // Identity State
     const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
     const [myVerifiedNick, setMyVerifiedNick] = useState<string | null>(null);
-
     // Fetch verified nick on mount
     useEffect(() => {
         const fetchIdentity = async () => {
@@ -55,7 +52,6 @@ const App: React.FC = () => {
         };
         fetchIdentity();
     }, [user]);
-
     const handleHeaderProfileClick = () => {
         if (myVerifiedNick) {
             setSelectedPlayer(myVerifiedNick);
@@ -64,7 +60,6 @@ const App: React.FC = () => {
             setCurrentView(ViewState.DASHBOARD);
         }
     };
-
     // Load Prices on Mount (Storage -> Default) - MUST be before conditional returns
     useEffect(() => {
         try {
@@ -81,15 +76,23 @@ const App: React.FC = () => {
             console.error("Failed to load prices", e);
         }
     }, []);
-
     // Load trade data from database if no file uploaded
     useEffect(() => {
         const loadDatabaseData = async () => {
             // Only load from DB if no file data exists
             if (marketData.length === 0 && dataSource === 'NONE') {
                 try {
-                    // --- MUDANÇA CRÍTICA: 5000 AQUI ---
-                    const logs = await IntelligenceService.getTradeLogs(5000);
+                    // CHAMADA DIRETA AO SUPABASE (bypass IntelligenceService)
+                    const { data: logs, error } = await supabase.rpc('get_trade_logs_for_market', { 
+                        limit_count: 5000 
+                    });
+                    
+                    if (error) {
+                        console.error('Supabase RPC error:', error);
+                        return;
+                    }
+                    
+                    console.log('🔍 DIRECT CALL: Supabase retornou', logs?.length || 0, 'logs');
                     
                     if (logs && logs.length > 0) {
                         const converted: MarketItem[] = logs.map((log: any) => {
@@ -97,9 +100,7 @@ const App: React.FC = () => {
                             let name = raw;
                             let price = 0;
                             
-                            // 1. Tentar extrair preço
                             price = FileParser.normalizePrice(raw);
-                            // 2. Limpar nome (remover QL/DMG/WT e brackets)
                             if (raw.includes('[')) {
                                 const match = raw.match(/\[(.*?)\]/);
                                 if (match) {
@@ -107,21 +108,20 @@ const App: React.FC = () => {
                                 }
                             }
                             
-                            // 3. Limpeza Agressiva de "Lixo"
                             name = name
                                 .replace(/QL:[\d.]+/gi, '')
                                 .replace(/DMG:[\d.]+/gi, '')
                                 .replace(/WT:[\d.]+/gi, '')
-                                .replace(/\bnull\b/gi, '')   // Remove "null"
-                                .replace(/\bcommon\b/gi, '') // Remove "common" (já tem na raridade)
-                                .replace(/\brare\b/gi, '')   // Remove "rare"
+                                .replace(/\bnull\b/gi, '')
+                                .replace(/\bcommon\b/gi, '')
+                                .replace(/\brare\b/gi, '')
                                 .replace(/\bsupreme\b/gi, '')
                                 .replace(/\bfantastic\b/gi, '')
-                                .replace(/^[\d.]+[kx]\s*/i, '') // Remove "1k ", "10x"
-                                .replace(/\s+/g, ' ')        // Remove espaços duplos
+                                .replace(/^[\d.]+[kx]\s*/i, '')
+                                .replace(/\s+/g, ' ')
                                 .trim();
-                            // Capitalizar primeira letra
                             name = name.charAt(0).toUpperCase() + name.slice(1);
+                            
                             return {
                                 id: String(log.id),
                                 name: name || 'Unknown Item',
@@ -129,7 +129,7 @@ const App: React.FC = () => {
                                 price: price,
                                 quantity: 1,
                                 quality: 0,
-                                rarity: 'Common', // TODO: Extrair da string se quiser
+                                rarity: 'Common',
                                 material: 'Unknown',
                                 orderType: log.trade_type || 'UNKNOWN',
                                 location: log.server || 'Unknown',
@@ -138,7 +138,7 @@ const App: React.FC = () => {
                         });
                         setMarketData(converted);
                         setDataSource('DATABASE');
-                        console.log(`Loaded ${logs.length} records from database (Cleaned & Polished)`);
+                        console.log(`✅ Loaded ${logs.length} records from database (Cleaned & Polished)`);
                     }
                 } catch (error) {
                     console.error('Failed to load from database:', error);
@@ -147,7 +147,6 @@ const App: React.FC = () => {
         };
         loadDatabaseData();
     }, []);
-
     // If we are in callback mode, ALWAYS show AuthCallback until it redirects
     if (isCallback) {
         return <AuthCallback />;
