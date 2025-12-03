@@ -3,7 +3,7 @@
  * Service layer for ranking/leaderboard functionality
  */
 
-import { supabase } from '../supabase';
+import { supabase } from './supabase';
 
 // ==================== TYPES ====================
 
