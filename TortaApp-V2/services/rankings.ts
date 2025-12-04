@@ -50,7 +50,7 @@ export const RankingsService = {
         });
 
         if (error) {
-            console.error('Error fetching active traders:', error?.message || error);
+            console.error('Error fetching active traders:', error);
             return [];
         }
 
@@ -76,7 +76,7 @@ export const RankingsService = {
         });
 
         if (error) {
-            console.error('Error fetching active sellers:', error?.message || error);
+            console.error('Error fetching active sellers:', error);
             return [];
         }
 
@@ -102,7 +102,7 @@ export const RankingsService = {
         });
 
         if (error) {
-            console.error('Error fetching active buyers:', error?.message || error);
+            console.error('Error fetching active buyers:', error);
             return [];
         }
 
@@ -125,7 +125,7 @@ export const RankingsService = {
         });
 
         if (error) {
-            console.error('Error fetching price checkers:', error?.message || error);
+            console.error('Error fetching price checkers:', error);
             return [];
         }
 

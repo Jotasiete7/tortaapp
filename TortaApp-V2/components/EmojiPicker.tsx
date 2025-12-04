@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, Smile, Car, Leaf, Dog, Pizza, Gamepad2, Hash, Flag, Package, X } from 'lucide-react';
 
 interface Emoji {
@@ -37,8 +37,11 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ onSelect, onClose }) =
     useEffect(() => {
         // Carregar índice de emojis
         fetch('/openmoji/openmoji-index.json')
-            .then(res => res.json())
-            .then(data => setEmojis(data))
+            .then(async res => {
+                if (!res.ok) throw new Error(`Failed to load emojis: ${res.statusText}`);
+                const data = await res.json();
+                setEmojis(data);
+            })
             .catch(err => console.error('Failed to load emojis:', err));
     }, []);
 
@@ -51,8 +54,8 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ onSelect, onClose }) =
 
         if (search) {
             const term = search.toLowerCase();
-            filtered = filtered.filter(e => 
-                e.name.includes(term) || 
+            filtered = filtered.filter(e =>
+                e.name.includes(term) ||
                 e.hexcode.toLowerCase().includes(term)
             );
         }
@@ -92,7 +95,7 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ onSelect, onClose }) =
                         autoFocus
                     />
                 </div>
-                <button 
+                <button
                     type="button"
                     onClick={onClose}
                     className="p-2 hover:bg-slate-800 rounded text-slate-400 hover:text-white"
@@ -108,9 +111,8 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ onSelect, onClose }) =
                         key={cat.id}
                         type="button"
                         onClick={() => setCategory(cat.id)}
-                        className={`p-2 rounded hover:bg-slate-800 transition-colors ${
-                            category === cat.id ? 'bg-amber-500/20 text-amber-500' : 'text-slate-400'
-                        }`}
+                        className={`p-2 rounded hover:bg-slate-800 transition-colors ${category === cat.id ? 'bg-amber-500/20 text-amber-500' : 'text-slate-400'
+                            }`}
                         title={cat.label}
                     >
                         <cat.icon className="w-5 h-5" />
@@ -119,7 +121,7 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ onSelect, onClose }) =
             </div>
 
             {/* Emoji Grid */}
-            <div 
+            <div
                 className="flex-1 overflow-y-auto p-2 grid grid-cols-6 gap-2 content-start"
                 ref={scrollRef}
                 onScroll={handleScroll}
@@ -132,8 +134,8 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ onSelect, onClose }) =
                         className="w-10 h-10 p-1 hover:bg-slate-800 rounded flex items-center justify-center transition-transform hover:scale-110"
                         title={emoji.name}
                     >
-                        <img 
-                            src={emoji.path} 
+                        <img
+                            src={emoji.path}
                             alt={emoji.emoji}
                             className="w-full h-full object-contain"
                             loading="lazy"
@@ -146,7 +148,7 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ onSelect, onClose }) =
                     </div>
                 )}
             </div>
-            
+
             {/* Footer Status */}
             <div className="px-3 py-1 bg-slate-950 text-xs text-slate-500 border-t border-slate-800 flex justify-between">
                 <span>{filteredEmojis.length} emojis</span>

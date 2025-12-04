@@ -114,9 +114,9 @@ export const Leaderboard = () => {
 
                 {/* 1. Most Active Traders */}
                 <RankingCard title="Most Active Traders" icon={Trophy} color="yellow">
-                    {activeTraders.map((t) => (
+                    {activeTraders.map((t, index) => (
                         <RankItem
-                            key={t.nick}
+                            key={`${t.nick}-${index}`}
                             rank={t.rank}
                             nick={t.nick}
                             value={t.wts_count}
@@ -128,9 +128,9 @@ export const Leaderboard = () => {
 
                 {/* 2. Top Sellers */}
                 <RankingCard title="Top Sellers (Month)" icon={ShoppingBag} color="emerald">
-                    {activeSellers.map((s) => (
+                    {activeSellers.map((s, index) => (
                         <RankItem
-                            key={s.nick}
+                            key={`${s.nick}-${index}`}
                             rank={s.rank}
                             nick={s.nick}
                             value={s.wts_count}
@@ -142,9 +142,9 @@ export const Leaderboard = () => {
 
                 {/* 3. Top Buyers */}
                 <RankingCard title="Top Buyers (Month)" icon={ShoppingCart} color="blue">
-                    {activeBuyers.map((b) => (
+                    {activeBuyers.map((b, index) => (
                         <RankItem
-                            key={b.nick}
+                            key={`${b.nick}-${index}`}
                             rank={b.rank}
                             nick={b.nick}
                             value={b.wtb_count}
@@ -156,9 +156,9 @@ export const Leaderboard = () => {
 
                 {/* 4. Price Checkers */}
                 <RankingCard title="Top Appraisers (Week)" icon={Search} color="purple">
-                    {priceCheckers.map((pc) => (
+                    {priceCheckers.map((pc, index) => (
                         <RankItem
-                            key={pc.nick}
+                            key={`${pc.nick}-${index}`}
                             rank={pc.rank}
                             nick={pc.nick}
                             value={pc.pc_count}
