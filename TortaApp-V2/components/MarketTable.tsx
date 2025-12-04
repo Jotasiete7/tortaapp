@@ -4,6 +4,7 @@ import { Search, Zap, ArrowUpDown, ChevronLeft, ChevronRight, ChevronsLeft, Chev
 import { MarketItem } from '../types';
 import { evaluateTrade, formatWurmPrice, findClosestReference } from '../services/priceUtils';
 import { SearchEngine } from '../services/searchEngine';
+import { parseSearchText, getStructuredFilter } from '../services/queryParser';
 import { useMarketSearch } from '../hooks/useMarketSearch';
 import { SearchHelp } from './ui/SearchHelp';
 
@@ -59,6 +60,15 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data, referencePrices 
     const [useAdvancedSearch, setUseAdvancedSearch] = useState(true);
     const searchEngineRef = useRef<SearchEngine | null>(null);
 
+    // Initialize search engine when data changes
+    useEffect(() => {
+        if (data.length > 0 && !searchEngineRef.current) {
+            searchEngineRef.current = new SearchEngine(data);
+        } else if (data.length > 0 && searchEngineRef.current) {
+            searchEngineRef.current = new SearchEngine(data);
+        }
+    }, [data]);
+
     useEffect(() => {
         setCurrentPage(1);
     }, [searchTerm, filterRarity, filterType]);
@@ -75,7 +85,28 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data, referencePrices 
     const processedData = useMemo(() => {
         let result = data;
 
-        if (searchTerm) {
+        // ADVANCED SEARCH: Use queryParser for structured queries
+        if (searchTerm && useAdvancedSearch) {
+            const { textQuery, structuredQuery } = parseSearchText(searchTerm);
+
+            // Phase 1: Text search (simple includes for now, can use SearchEngine later)
+            if (textQuery) {
+                const lowerTerm = textQuery.toLowerCase();
+                result = result.filter(item =>
+                    item.name.toLowerCase().includes(lowerTerm) ||
+                    item.seller.toLowerCase().includes(lowerTerm) ||
+                    item.material.toLowerCase().includes(lowerTerm)
+                );
+            }
+
+            // Phase 2: Apply structured filters (ql>90, price<50, etc.)
+            if (structuredQuery) {
+                const applyFilter = getStructuredFilter(structuredQuery);
+                result = result.filter(applyFilter);
+            }
+        }
+        // FALLBACK: Simple text search
+        else if (searchTerm && !useAdvancedSearch) {
             const lowerTerm = searchTerm.toLowerCase();
             result = result.filter(item =>
                 item.name.toLowerCase().includes(lowerTerm) ||
@@ -163,13 +194,13 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data, referencePrices 
 
                     <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto flex-wrap">
                         <div className="relative flex-1 sm:flex-none sm:min-w-[280px]">
-                            {useAdvancedSearch && <Zap className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-amber-500 animate-pulse" title="Advanced Search Active" />}{useAdvancedSearch && <Zap className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-amber-500 animate-pulse" title="Advanced Search Active" />}<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                            {useAdvancedSearch && <Zap className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-amber-500 animate-pulse" title="Advanced Search Active" />}<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                             <input
                                 type="text"
-                                placeholder={useAdvancedSearch ? "Try: stone ql>90 price<50..." : "Search item, seller..."}
+                                placeholder={useAdvancedSearch ? "Try: iron ore ql>90 price<50..." : "Search item, seller..."}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full bg-slate-900 border border-slate-600 text-white pl-9 pr-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/50 text-sm"
+                                className="w-full bg-slate-900 border border-slate-600 text-white pl-9 pr-10 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/50 text-sm"
                             />
                         </div>
 
