@@ -1,4 +1,4 @@
-﻿# Logs
+# Logs
 logs
 *.log
 npm-debug.log*
@@ -22,16 +22,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
-# Data files (large datasets)
-*.txt
-!README.txt
-
-# Python scripts (legacy)
-*.py
-
-# Backups
-*.backup
-
-# Test files
-*.cjs

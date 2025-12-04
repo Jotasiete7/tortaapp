@@ -1,4 +1,4 @@
-
+﻿
 // Data Models based on the implied Python structure
 export interface MarketItem {
     id: string;
@@ -12,6 +12,7 @@ export interface MarketItem {
     seller: string;
     location: string;
     timestamp: string;
+    searchableText?: string; // Optional: Pre-computed search text for SearchEngine
 }
 
 export interface PredictionResult {

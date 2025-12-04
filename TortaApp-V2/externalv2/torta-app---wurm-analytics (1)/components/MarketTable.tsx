@@ -1,15 +1,15 @@
-﻿
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, Zap, ArrowUpDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Coins, ShoppingBag, Tag, ThumbsUp, ThumbsDown, BookOpen, Layers } from 'lucide-react';
+
+import React, { useState, useMemo, useEffect } from 'react';
+import { Search, ArrowUpDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Coins, ShoppingBag, Tag, ThumbsUp, ThumbsDown, BookOpen, Layers } from 'lucide-react';
 import { MarketItem } from '../types';
 import { evaluateTrade, formatWurmPrice, findClosestReference } from '../services/priceUtils';
 import { SearchEngine } from '../services/searchEngine';
 import { useMarketSearch } from '../hooks/useMarketSearch';
-import { SearchHelp } from './ui/SearchHelp';
 
 interface MarketTableProps {
   data: MarketItem[];
   referencePrices: Record<string, number>;
+  searchEngine: SearchEngine | null; // Receive search engine
 }
 
 const ITEMS_PER_PAGE = 50;
@@ -49,16 +49,15 @@ const BulkPriceDisplay = ({ unitPrice }: { unitPrice: number }) => {
     );
 };
 
-export const MarketTable: React.FC<MarketTableProps> = ({ data, referencePrices }) => {
+export const MarketTable: React.FC<MarketTableProps> = ({ data, referencePrices, searchEngine }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRarity, setFilterRarity] = useState<string>('ALL');
   const [filterType, setFilterType] = useState<string>('ALL');
   const [sortField, setSortField] = useState<keyof MarketItem>('timestamp');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
-  const [useAdvancedSearch, setUseAdvancedSearch] = useState(true);
-  const searchEngineRef = useRef<SearchEngine | null>(null);
 
+  // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, filterRarity, filterType]);
@@ -72,17 +71,17 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data, referencePrices 
     }
   };
 
-  const processedData = useMemo(() => {
-    let result = data;
+  // 1. ADVANCED SEARCH PHASE
+  // Uses the hook to combine Index Search + Structured Queries (ql>90)
+  const searchResults = useMarketSearch({
+      data,
+      searchEngine,
+      searchText: searchTerm
+  });
 
-    if (searchTerm) {
-      const lowerTerm = searchTerm.toLowerCase();
-      result = result.filter(item => 
-        item.name.toLowerCase().includes(lowerTerm) ||
-        item.seller.toLowerCase().includes(lowerTerm) ||
-        item.material.toLowerCase().includes(lowerTerm)
-      );
-    }
+  // 2. FILTER & SORT PHASE (Linear on subset)
+  const processedData = useMemo(() => {
+    let result = searchResults;
 
     if (filterRarity !== 'ALL') {
       result = result.filter(item => item.rarity === filterRarity);
@@ -103,7 +102,7 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data, referencePrices 
         ? String(valA).localeCompare(String(valB))
         : String(valB).localeCompare(String(valA));
     });
-    }, [data, searchedData, searchTerm, sortField, sortDir, filterRarity, filterType, useAdvancedSearch]);
+  }, [searchResults, sortField, sortDir, filterRarity, filterType]);
 
   // Calculations for the Summary Bar
   const stats = useMemo(() => {
@@ -115,9 +114,15 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data, referencePrices 
   }, [processedData]);
 
   // Find the closest reference price for the current search term
+  // We use the raw search term, but stripping query logic might be better for finding refs.
+  // E.g. "stone ql>90" -> find ref for "stone"
+  const cleanSearchTerm = useMemo(() => {
+       return searchTerm.replace(/([a-zA-Z]+)\s*(>=|<=|>|<|=)\s*([\w\d\.]+)/g, '').trim();
+  }, [searchTerm]);
+
   const referenceMatch = useMemo(() => {
-      return findClosestReference(searchTerm, referencePrices);
-  }, [searchTerm, referencePrices]);
+      return findClosestReference(cleanSearchTerm, referencePrices);
+  }, [cleanSearchTerm, referencePrices]);
 
   const totalPages = Math.ceil(processedData.length / ITEMS_PER_PAGE);
   const currentData = processedData.slice(
@@ -163,17 +168,15 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data, referencePrices 
             
             <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto flex-wrap">
             <div className="relative flex-1 sm:flex-none sm:min-w-[240px]">
-                {useAdvancedSearch && <Zap className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-amber-500 animate-pulse" title="Advanced Search Active" />}<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input 
                 type="text"
-                placeholder={useAdvancedSearch ? "Try: stone ql>90 price<50..." : "Search item, seller..."}
+                placeholder="Search (e.g. stone ql>50)"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-600 text-white pl-9 pr-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/50 text-sm"
                 />
             </div>
-            
-            <SearchHelp />
             
             <select 
                 value={filterType}
