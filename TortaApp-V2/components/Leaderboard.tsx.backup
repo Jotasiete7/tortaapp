@@ -116,12 +116,12 @@ export const Leaderboard = () => {
                 <RankingCard title="Most Active Traders" icon={Trophy} color="yellow">
                     {activeTraders.map((t) => (
                         <RankItem
-                            key={`-`}
+                            key={t.nick}
                             rank={t.rank}
                             nick={t.nick}
                             value={t.wts_count}
                             subValue="WTS Posts"
-                            badge="?? Trader"
+                            badge="🔥 Trader"
                         />
                     ))}
                 </RankingCard>
@@ -130,12 +130,12 @@ export const Leaderboard = () => {
                 <RankingCard title="Top Sellers (Month)" icon={ShoppingBag} color="emerald">
                     {activeSellers.map((s) => (
                         <RankItem
-                            key={`-`}
+                            key={s.nick}
                             rank={s.rank}
                             nick={s.nick}
                             value={s.wts_count}
                             subValue="Listings"
-                            badge="?? Merchant"
+                            badge="📦 Merchant"
                         />
                     ))}
                 </RankingCard>
@@ -144,12 +144,12 @@ export const Leaderboard = () => {
                 <RankingCard title="Top Buyers (Month)" icon={ShoppingCart} color="blue">
                     {activeBuyers.map((b) => (
                         <RankItem
-                            key={`-`}
+                            key={b.nick}
                             rank={b.rank}
                             nick={b.nick}
                             value={b.wtb_count}
                             subValue="Requests"
-                            badge="?? Investor"
+                            badge="💰 Investor"
                         />
                     ))}
                 </RankingCard>
@@ -158,12 +158,12 @@ export const Leaderboard = () => {
                 <RankingCard title="Top Appraisers (Week)" icon={Search} color="purple">
                     {priceCheckers.map((pc) => (
                         <RankItem
-                            key={`-`}
+                            key={pc.nick}
                             rank={pc.rank}
                             nick={pc.nick}
                             value={pc.pc_count}
                             subValue="Checks"
-                            badge="?? Expert"
+                            badge="🔍 Expert"
                         />
                     ))}
                 </RankingCard>
