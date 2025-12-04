@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase, TickerMessage } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ProtectedAdmin } from '../components/ProtectedAdmin';
-import { Megaphone, Plus, Trash2, Clock, Database } from 'lucide-react';
+import { Megaphone, Plus, Trash2, Clock, Database, Smile } from 'lucide-react';
+import { EmojiPicker } from './EmojiPicker';
 import { BulkDataUploader } from '../services/logProcessing';
 
 export const AdminPanel: React.FC = () => {
@@ -22,6 +23,7 @@ const AdminPanelContent: React.FC = () => {
     const [isPaid, setIsPaid] = useState(false);
     const [expiresIn, setExpiresIn] = useState<number | null>(null);
     const [loading, setLoading] = useState(false);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
     useEffect(() => {
         fetchMessages();
@@ -173,7 +175,7 @@ const AdminPanelContent: React.FC = () => {
 
                 <form onSubmit={handleAddMessage} className="space-y-4">
                     {/* Message Text */}
-                    <div className="space-y-2">
+                    <div className="space-y-2 relative">
                         <label className="text-sm font-medium text-slate-300">Message Text</label>
                         <input
                             type="text"
@@ -182,8 +184,26 @@ const AdminPanelContent: React.FC = () => {
                             placeholder="Enter ticker message..."
                             required
                             maxLength={200}
-                            className="w-full p-3 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder:text-slate-600 focus:ring-2 focus:ring-amber-500/50 outline-none"
+                            className="w-full p-3 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder:text-slate-600 focus:ring-2 focus:ring-amber-500/50 outline-none pr-10"
                         />
+                        <button
+                            type="button"
+                            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                            className="absolute right-2 top-9 p-1.5 text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded-lg transition-colors"
+                        >
+                            <Smile className="w-5 h-5" />
+                        </button>
+                        {showEmojiPicker && (
+                            <div className="absolute right-0 top-full mt-2 z-50">
+                                <EmojiPicker
+                                    onSelect={(emoji) => {
+                                        setNewMessage(prev => prev + emoji.emoji);
+                                        setShowEmojiPicker(false);
+                                    }}
+                                    onClose={() => setShowEmojiPicker(false)}
+                                />
+                            </div>
+                        )}
                         <div className="text-xs text-slate-500 text-right">
                             {newMessage.length}/200 characters
                         </div>
