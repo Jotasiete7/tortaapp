@@ -5,10 +5,11 @@ import { emojiService } from '../services/emojiService';
 
 export const NewsTicker: React.FC = () => {
     const [messages, setMessages] = useState<TickerMessage[]>([]);
+    const [emojisLoaded, setEmojisLoaded] = useState(false);
 
     useEffect(() => {
         // Load emojis
-        emojiService.loadEmojis();
+        emojiService.loadEmojis().then(() => setEmojisLoaded(true));
 
         // Fetch initial messages
         fetchMessages();
@@ -46,6 +47,11 @@ export const NewsTicker: React.FC = () => {
             setMessages(data);
         }
     };
+
+    // Wait for emojis to load before rendering
+    if (!emojisLoaded) {
+        return null;
+    }
 
     if (messages.length === 0) {
         return null;
