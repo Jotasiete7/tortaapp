@@ -6,6 +6,10 @@ import { emojiService } from '../services/emojiService';
 export const NewsTicker: React.FC = () => {
     const [messages, setMessages] = useState<TickerMessage[]>([]);
     const [emojisLoaded, setEmojisLoaded] = useState(false);
+    const [speed, setSpeed] = useState<number>(() => {
+        const saved = localStorage.getItem('ticker_speed');
+        return saved ? parseFloat(saved) : 1;
+    });
 
     useEffect(() => {
         // Load emojis
@@ -33,6 +37,17 @@ export const NewsTicker: React.FC = () => {
         return () => {
             supabase.removeChannel(channel);
         };
+    }, []);
+
+    // Listen for speed changes from localStorage (cross-tab sync)
+    useEffect(() => {
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === 'ticker_speed' && e.newValue) {
+                setSpeed(parseFloat(e.newValue));
+            }
+        };
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
 
     const fetchMessages = async () => {
@@ -74,7 +89,7 @@ export const NewsTicker: React.FC = () => {
                 <div className="flex-1 overflow-hidden relative">
                     <div className="animate-marquee whitespace-nowrap inline-block">
                         {[...messages, ...messages].map((msg, index) => (
-                            <span key={msg.id} className="inline-flex items-center mx-6">
+                            <span key={`${msg.id}-${index}`} className="inline-flex items-center mx-6">
                                 {msg.paid && (
                                     <span className="mr-2 px-2 py-0.5 bg-amber-500 text-black text-xs font-bold rounded">
                                         PAID
@@ -85,10 +100,10 @@ export const NewsTicker: React.FC = () => {
                                         typeof part === 'string' ? (
                                             <span key={i}>{part}</span>
                                         ) : (
-                                            <img 
-                                                key={i} 
-                                                src={part.path} 
-                                                alt={part.alt} 
+                                            <img
+                                                key={i}
+                                                src={part.path}
+                                                alt={part.alt}
                                                 className="w-5 h-5 inline-block mx-0.5 align-text-bottom"
                                                 loading="eager"
                                             />
@@ -110,7 +125,7 @@ export const NewsTicker: React.FC = () => {
           100% { transform: translateX(-100%); }
         }
         .animate-marquee {
-          animation: marquee 60s linear infinite;
+          animation: marquee ${60 / speed}s linear infinite;
         }
         .animate-marquee:hover {
           animation-play-state: paused;

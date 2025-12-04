@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase, TickerMessage } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ProtectedAdmin } from '../components/ProtectedAdmin';
-import { Megaphone, Plus, Trash2, Clock, Database, Smile } from 'lucide-react';
+import { Megaphone, Plus, Trash2, Clock, Database, Smile, Gauge } from 'lucide-react';
 import { EmojiPicker } from './EmojiPicker';
 import { BulkDataUploader } from '../services/logProcessing';
 
@@ -24,6 +24,10 @@ const AdminPanelContent: React.FC = () => {
     const [expiresIn, setExpiresIn] = useState<number | null>(null);
     const [loading, setLoading] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [tickerSpeed, setTickerSpeed] = useState<number>(() => {
+        const saved = localStorage.getItem('ticker_speed');
+        return saved ? parseFloat(saved) : 1;
+    });
 
     useEffect(() => {
         fetchMessages();
@@ -107,6 +111,16 @@ const AdminPanelContent: React.FC = () => {
         }
     };
 
+    const handleSpeedChange = (newSpeed: number) => {
+        setTickerSpeed(newSpeed);
+        localStorage.setItem('ticker_speed', newSpeed.toString());
+        // Trigger storage event for cross-tab sync
+        window.dispatchEvent(new StorageEvent('storage', {
+            key: 'ticker_speed',
+            newValue: newSpeed.toString()
+        }));
+    };
+
     const colorOptions = [
         { value: 'green', label: 'Green', class: 'bg-emerald-500' },
         { value: 'red', label: 'Red', class: 'bg-rose-500' },
@@ -134,11 +148,10 @@ const AdminPanelContent: React.FC = () => {
             <div className="flex justify-center gap-4 border-b border-slate-700 pb-1 mb-6">
                 <button
                     onClick={() => setActiveTab('ticker')}
-                    className={`px-6 py-3 font-medium text-sm transition-all border-b-2 ${
-                        activeTab === 'ticker'
+                    className={`px-6 py-3 font-medium text-sm transition-all border-b-2 ${activeTab === 'ticker'
                             ? 'border-amber-500 text-amber-500'
                             : 'border-transparent text-slate-400 hover:text-slate-200'
-                    }`}
+                        }`}
                 >
                     <div className="flex items-center gap-2">
                         <Megaphone className="w-4 h-4" />
@@ -147,11 +160,10 @@ const AdminPanelContent: React.FC = () => {
                 </button>
                 <button
                     onClick={() => setActiveTab('upload')}
-                    className={`px-6 py-3 font-medium text-sm transition-all border-b-2 ${
-                        activeTab === 'upload'
+                    className={`px-6 py-3 font-medium text-sm transition-all border-b-2 ${activeTab === 'upload'
                             ? 'border-amber-500 text-amber-500'
                             : 'border-transparent text-slate-400 hover:text-slate-200'
-                    }`}
+                        }`}
                 >
                     <div className="flex items-center gap-2">
                         <Database className="w-4 h-4" />
@@ -166,177 +178,235 @@ const AdminPanelContent: React.FC = () => {
                 </div>
             ) : (
                 <div className="space-y-8 animate-fade-in">
-                    {/* Add Message Form */}
-            <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-                <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                    <Plus className="w-5 h-5 text-amber-400" />
-                    Add New Message
-                </h3>
+                    {/* Ticker Speed Control */}
+                    <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
+                        <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                            <Gauge className="w-5 h-5 text-amber-400" />
+                            Ticker Speed Control
+                        </h3>
 
-                <form onSubmit={handleAddMessage} className="space-y-4">
-                    {/* Message Text */}
-                    <div className="space-y-2 relative">
-                        <label className="text-sm font-medium text-slate-300">Message Text</label>
-                        <input
-                            type="text"
-                            value={newMessage}
-                            onChange={(e) => setNewMessage(e.target.value)}
-                            placeholder="Enter ticker message..."
-                            required
-                            maxLength={200}
-                            className="w-full p-3 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder:text-slate-600 focus:ring-2 focus:ring-amber-500/50 outline-none pr-10"
-                        />
-                        <button
-                            type="button"
-                            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                            className="absolute right-2 top-9 p-1.5 text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded-lg transition-colors"
-                        >
-                            <Smile className="w-5 h-5" />
-                        </button>
-                        {showEmojiPicker && (
-                            <div className="absolute right-0 top-full mt-2 z-50">
-                                <EmojiPicker
-                                    onSelect={(emoji) => {
-                                        setNewMessage(prev => prev + emoji.emoji);
-                                        setShowEmojiPicker(false);
-                                    }}
-                                    onClose={() => setShowEmojiPicker(false)}
+                        <div className="space-y-4">
+                            {/* Speed Slider */}
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-sm font-medium text-slate-300">Speed Multiplier</label>
+                                    <span className="text-lg font-bold text-amber-400">{tickerSpeed.toFixed(1)}x</span>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0.5"
+                                    max="3"
+                                    step="0.1"
+                                    value={tickerSpeed}
+                                    onChange={(e) => handleSpeedChange(parseFloat(e.target.value))}
+                                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer"
                                 />
+                                <div className="flex justify-between text-xs text-slate-500">
+                                    <span>0.5x (Slow)</span>
+                                    <span>1.0x (Normal)</span>
+                                    <span>3.0x (Fast)</span>
+                                </div>
+                            </div>
+
+                            {/* Quick Presets */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-300">Quick Presets</label>
+                                <div className="grid grid-cols-5 gap-2">
+                                    {[0.5, 1, 1.5, 2, 3].map((preset) => (
+                                        <button
+                                            key={preset}
+                                            onClick={() => handleSpeedChange(preset)}
+                                            className={`py-2 px-3 rounded-lg font-medium text-sm transition-all ${tickerSpeed === preset
+                                                    ? 'bg-amber-600 text-white shadow-lg shadow-amber-900/20'
+                                                    : 'bg-slate-900 text-slate-400 hover:bg-slate-700 hover:text-white border border-slate-700'
+                                                }`}
+                                        >
+                                            {preset}x
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Info */}
+                            <div className="bg-slate-900/50 border border-slate-700/50 rounded-lg p-3">
+                                <p className="text-xs text-slate-400">
+                                    💡 <strong>Tip:</strong> Higher values make the ticker scroll faster. Changes apply immediately and persist across sessions.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Add Message Form */}
+                    <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
+                        <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                            <Plus className="w-5 h-5 text-amber-400" />
+                            Add New Message
+                        </h3>
+
+                        <form onSubmit={handleAddMessage} className="space-y-4">
+                            {/* Message Text */}
+                            <div className="space-y-2 relative">
+                                <label className="text-sm font-medium text-slate-300">Message Text</label>
+                                <input
+                                    type="text"
+                                    value={newMessage}
+                                    onChange={(e) => setNewMessage(e.target.value)}
+                                    placeholder="Enter ticker message..."
+                                    required
+                                    maxLength={200}
+                                    className="w-full p-3 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder:text-slate-600 focus:ring-2 focus:ring-amber-500/50 outline-none pr-10"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                                    className="absolute right-2 top-9 p-1.5 text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded-lg transition-colors"
+                                >
+                                    <Smile className="w-5 h-5" />
+                                </button>
+                                {showEmojiPicker && (
+                                    <div className="absolute right-0 top-full mt-2 z-50">
+                                        <EmojiPicker
+                                            onSelect={(emoji) => {
+                                                setNewMessage(prev => prev + emoji.emoji);
+                                                setShowEmojiPicker(false);
+                                            }}
+                                            onClose={() => setShowEmojiPicker(false)}
+                                        />
+                                    </div>
+                                )}
+                                <div className="text-xs text-slate-500 text-right">
+                                    {newMessage.length}/200 characters
+                                </div>
+                            </div>
+
+                            {/* Color Selection */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-300">Color</label>
+                                <div className="grid grid-cols-5 gap-2">
+                                    {colorOptions.map((opt) => (
+                                        <button
+                                            key={opt.value}
+                                            type="button"
+                                            onClick={() => setColor(opt.value as any)}
+                                            className={`p-3 rounded-lg border-2 transition-all ${color === opt.value
+                                                ? 'border-amber-500 scale-105'
+                                                : 'border-slate-700 hover:border-slate-600'
+                                                }`}
+                                        >
+                                            <div className={`w-full h-8 ${opt.class} rounded`}></div>
+                                            <div className="text-xs text-slate-400 mt-1">{opt.label}</div>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Paid & Expires */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={isPaid}
+                                            onChange={(e) => setIsPaid(e.target.checked)}
+                                            className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-amber-600 focus:ring-amber-500/50"
+                                        />
+                                        <span className="text-sm font-medium text-slate-300">Paid Announcement</span>
+                                    </label>
+                                    <p className="text-xs text-slate-500">Shows "PAID" badge</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                                        <Clock className="w-4 h-4" />
+                                        Expires In (days)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={expiresIn || ''}
+                                        onChange={(e) => setExpiresIn(e.target.value ? parseInt(e.target.value) : null)}
+                                        placeholder="Never"
+                                        min="1"
+                                        max="365"
+                                        className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder:text-slate-600 focus:ring-2 focus:ring-amber-500/50 outline-none"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Submit Button */}
+                            <button
+                                type="submit"
+                                disabled={loading || !newMessage.trim()}
+                                className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-900/20"
+                            >
+                                {loading ? 'Adding...' : 'Add to Global Ticker'}
+                            </button>
+                        </form>
+                    </div>
+
+                    {/* Messages List */}
+                    <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
+                        <h3 className="text-xl font-bold text-white mb-4">
+                            Active Messages ({messages.length})
+                        </h3>
+
+                        {messages.length === 0 ? (
+                            <div className="text-center py-12 text-slate-500">
+                                <Megaphone className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                                <p>No messages yet. Add your first one above!</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {messages.map((msg) => {
+                                    const isExpired = msg.expires_at && new Date(msg.expires_at) < new Date();
+                                    const colorClass = {
+                                        green: 'text-emerald-400',
+                                        red: 'text-rose-400',
+                                        yellow: 'text-yellow-400',
+                                        cyan: 'text-cyan-400',
+                                        purple: 'text-purple-400'
+                                    }[msg.color];
+
+                                    return (
+                                        <div
+                                            key={msg.id}
+                                            className={`p-4 bg-slate-900 rounded-lg border ${isExpired ? 'border-slate-800 opacity-50' : 'border-slate-700'
+                                                } flex items-start justify-between gap-4`}
+                                        >
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    {msg.paid && (
+                                                        <span className="px-2 py-0.5 bg-amber-500 text-black text-xs font-bold rounded">
+                                                            PAID
+                                                        </span>
+                                                    )}
+                                                    {isExpired && (
+                                                        <span className="px-2 py-0.5 bg-slate-700 text-slate-400 text-xs font-bold rounded">
+                                                            EXPIRED
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className={`${colorClass} font-medium mb-2`}>{msg.text}</p>
+                                                <div className="flex items-center gap-4 text-xs text-slate-500">
+                                                    <span>ID: {msg.id}</span>
+                                                    <span>Created: {new Date(msg.created_at).toLocaleDateString()}</span>
+                                                    {msg.expires_at && (
+                                                        <span>Expires: {new Date(msg.expires_at).toLocaleDateString()}</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => handleDeleteMessage(msg.id)}
+                                                className="p-2 text-rose-400 hover:bg-rose-500/10 rounded-lg transition"
+                                                title="Delete message"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         )}
-                        <div className="text-xs text-slate-500 text-right">
-                            {newMessage.length}/200 characters
-                        </div>
                     </div>
-
-                    {/* Color Selection */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-300">Color</label>
-                        <div className="grid grid-cols-5 gap-2">
-                            {colorOptions.map((opt) => (
-                                <button
-                                    key={opt.value}
-                                    type="button"
-                                    onClick={() => setColor(opt.value as any)}
-                                    className={`p-3 rounded-lg border-2 transition-all ${color === opt.value
-                                            ? 'border-amber-500 scale-105'
-                                            : 'border-slate-700 hover:border-slate-600'
-                                        }`}
-                                >
-                                    <div className={`w-full h-8 ${opt.class} rounded`}></div>
-                                    <div className="text-xs text-slate-400 mt-1">{opt.label}</div>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Paid & Expires */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={isPaid}
-                                    onChange={(e) => setIsPaid(e.target.checked)}
-                                    className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-amber-600 focus:ring-amber-500/50"
-                                />
-                                <span className="text-sm font-medium text-slate-300">Paid Announcement</span>
-                            </label>
-                            <p className="text-xs text-slate-500">Shows "PAID" badge</p>
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
-                                <Clock className="w-4 h-4" />
-                                Expires In (days)
-                            </label>
-                            <input
-                                type="number"
-                                value={expiresIn || ''}
-                                onChange={(e) => setExpiresIn(e.target.value ? parseInt(e.target.value) : null)}
-                                placeholder="Never"
-                                min="1"
-                                max="365"
-                                className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder:text-slate-600 focus:ring-2 focus:ring-amber-500/50 outline-none"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Submit Button */}
-                    <button
-                        type="submit"
-                        disabled={loading || !newMessage.trim()}
-                        className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-900/20"
-                    >
-                        {loading ? 'Adding...' : 'Add to Global Ticker'}
-                    </button>
-                </form>
-            </div>
-
-            {/* Messages List */}
-            <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-                <h3 className="text-xl font-bold text-white mb-4">
-                    Active Messages ({messages.length})
-                </h3>
-
-                {messages.length === 0 ? (
-                    <div className="text-center py-12 text-slate-500">
-                        <Megaphone className="w-12 h-12 mx-auto mb-2 opacity-20" />
-                        <p>No messages yet. Add your first one above!</p>
-                    </div>
-                ) : (
-                    <div className="space-y-2">
-                        {messages.map((msg) => {
-                            const isExpired = msg.expires_at && new Date(msg.expires_at) < new Date();
-                            const colorClass = {
-                                green: 'text-emerald-400',
-                                red: 'text-rose-400',
-                                yellow: 'text-yellow-400',
-                                cyan: 'text-cyan-400',
-                                purple: 'text-purple-400'
-                            }[msg.color];
-
-                            return (
-                                <div
-                                    key={msg.id}
-                                    className={`p-4 bg-slate-900 rounded-lg border ${isExpired ? 'border-slate-800 opacity-50' : 'border-slate-700'
-                                        } flex items-start justify-between gap-4`}
-                                >
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            {msg.paid && (
-                                                <span className="px-2 py-0.5 bg-amber-500 text-black text-xs font-bold rounded">
-                                                    PAID
-                                                </span>
-                                            )}
-                                            {isExpired && (
-                                                <span className="px-2 py-0.5 bg-slate-700 text-slate-400 text-xs font-bold rounded">
-                                                    EXPIRED
-                                                </span>
-                                            )}
-                                        </div>
-                                        <p className={`${colorClass} font-medium mb-2`}>{msg.text}</p>
-                                        <div className="flex items-center gap-4 text-xs text-slate-500">
-                                            <span>ID: {msg.id}</span>
-                                            <span>Created: {new Date(msg.created_at).toLocaleDateString()}</span>
-                                            {msg.expires_at && (
-                                                <span>Expires: {new Date(msg.expires_at).toLocaleDateString()}</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => handleDeleteMessage(msg.id)}
-                                        className="p-2 text-rose-400 hover:bg-rose-500/10 rounded-lg transition"
-                                        title="Delete message"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-            </div>
                 </div>
             )}
         </div>
