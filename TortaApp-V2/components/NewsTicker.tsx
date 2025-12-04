@@ -73,7 +73,7 @@ export const NewsTicker: React.FC = () => {
                 </div>
                 <div className="flex-1 overflow-hidden relative">
                     <div className="animate-marquee whitespace-nowrap inline-block">
-                        {messages.map((msg, index) => (
+                        {[...messages, ...messages].map((msg, index) => (
                             <span key={msg.id} className="inline-flex items-center mx-6">
                                 {msg.paid && (
                                     <span className="mr-2 px-2 py-0.5 bg-amber-500 text-black text-xs font-bold rounded">
@@ -106,11 +106,11 @@ export const NewsTicker: React.FC = () => {
 
             <style>{`
         @keyframes marquee {
-          0% { transform: translateX(0%); }
-          100% { transform: translateX(-50%); }
+          0% { transform: translateX(100%); }
+          100% { transform: translateX(-100%); }
         }
         .animate-marquee {
-          animation: marquee 30s linear infinite;
+          animation: marquee 60s linear infinite;
         }
         .animate-marquee:hover {
           animation-play-state: paused;
