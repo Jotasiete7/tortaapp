@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+﻿import { supabase } from './supabase';
 
 export interface TraderProfile {
     nick: string;
@@ -43,9 +43,6 @@ export interface GlobalStats {
 }
 
 export const IntelligenceService = {
-    /**
-     * Fetches global stats for the dashboard.
-     */
     getGlobalStats: async (): Promise<GlobalStats | null> => {
         const { data, error } = await supabase
             .rpc('get_global_stats');
@@ -55,13 +52,9 @@ export const IntelligenceService = {
             return null;
         }
 
-        // RPC returns an array of objects, we expect one row
         return data && data.length > 0 ? data[0] : null;
     },
 
-    /**
-     * Fetches the top traders based on volume.
-     */
     getTopTraders: async (limit: number = 10): Promise<TraderProfile[]> => {
         const { data, error } = await supabase
             .rpc('get_top_traders', { limit_count: limit });
@@ -74,9 +67,6 @@ export const IntelligenceService = {
         return data || [];
     },
 
-    /**
-     * Fetches detailed stats for a specific player (Basic Version).
-     */
     getPlayerStats: async (nick: string): Promise<PlayerStats | null> => {
         const { data, error } = await supabase
             .rpc('get_player_stats', { player_nick: nick });
@@ -89,9 +79,6 @@ export const IntelligenceService = {
         return data && data.length > 0 ? data[0] : null;
     },
 
-    /**
-     * Fetches advanced stats for the player profile page.
-     */
     getPlayerStatsAdvanced: async (nick: string): Promise<PlayerStatsAdvanced | null> => {
         const { data, error } = await supabase
             .rpc('get_player_stats_advanced', { target_nick: nick });
@@ -104,9 +91,6 @@ export const IntelligenceService = {
         return data && data.length > 0 ? data[0] : null;
     },
 
-    /**
-     * Fetches paginated logs for a specific player.
-     */
     getPlayerLogs: async (nick: string, limit: number = 50, offset: number = 0): Promise<PlayerLog[]> => {
         const { data, error } = await supabase
             .rpc('get_player_logs', { target_nick: nick, limit_count: limit, offset_count: offset });
@@ -119,9 +103,6 @@ export const IntelligenceService = {
         return data || [];
     },
 
-    /**
-     * Fetches daily activity data for charts.
-     */
     getPlayerActivity: async (nick: string): Promise<ActivityPoint[]> => {
         const { data, error } = await supabase
             .rpc('get_player_activity_chart', { target_nick: nick });
@@ -136,8 +117,9 @@ export const IntelligenceService = {
 
     /**
      * Fetches trade logs for Trade Master view
+     * 📊 INCREASED LIMIT: 5000 -> 50000 to match Supabase max_rows config
      */
-    getTradeLogs: async (limit: number = 5000): Promise<any[]> => {
+    getTradeLogs: async (limit: number = 50000): Promise<any[]> => {
         const { data, error } = await supabase
             .rpc('get_trade_logs_for_market', { limit_count: limit });
 

@@ -7,6 +7,7 @@ import { SearchEngine } from '../services/searchEngine';
 import { parseSearchText, getStructuredFilter } from '../services/queryParser';
 import { useMarketSearch } from '../hooks/useMarketSearch';
 import { SearchHelp } from './ui/SearchHelp';
+import { ActiveFilters, ActiveFilter } from './ui/ActiveFilters';
 
 interface MarketTableProps {
     data: MarketItem[];
@@ -80,6 +81,107 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data, referencePrices 
             setSortField(field);
             setSortDir('desc');
         }
+    };
+
+    // Parse active filters from search term
+    const activeFilters = useMemo((): ActiveFilter[] => {
+        if (!searchTerm) return [];
+
+        const { textQuery, structuredQuery } = parseSearchText(searchTerm);
+        const filters: ActiveFilter[] = [];
+
+        // Add text query as filter
+        if (textQuery) {
+            filters.push({
+                type: 'text',
+                value: textQuery,
+            });
+        }
+
+        // Parse structured filters
+        if (structuredQuery) {
+            const filterRegex = /([a-zA-Z]+)\s*(>=|<=|>|<|=)\s*([\w\d\.]+)/g;
+            const matches = [...structuredQuery.matchAll(filterRegex)];
+
+            matches.forEach(match => {
+                const fieldAlias = match[1].toLowerCase();
+                const operator = match[2] as '>' | '<' | '=' | '>=' | '<=';
+                const value = match[3];
+
+                // Map alias to type
+                let type: ActiveFilter['type'] = 'text';
+                let displayName = fieldAlias;
+
+                if (fieldAlias === 'ql' || fieldAlias === 'quality' || fieldAlias === 'q') {
+                    type = 'quality';
+                    displayName = 'QL';
+                } else if (fieldAlias === 'price' || fieldAlias === 'p') {
+                    type = 'price';
+                    displayName = 'Price';
+                } else if (fieldAlias === 'qty' || fieldAlias === 'quantity') {
+                    type = 'quantity';
+                    displayName = 'Qty';
+                } else if (fieldAlias === 'seller' || fieldAlias === 's') {
+                    type = 'seller';
+                    displayName = 'Seller';
+                } else if (fieldAlias === 'rarity' || fieldAlias === 'r') {
+                    type = 'rarity';
+                    displayName = 'Rarity';
+                } else if (fieldAlias === 'material' || fieldAlias === 'm') {
+                    type = 'material';
+                    displayName = 'Material';
+                }
+
+                filters.push({
+                    type,
+                    operator,
+                    value: isNaN(Number(value)) ? value : Number(value),
+                    displayName,
+                });
+            });
+        }
+
+        return filters;
+    }, [searchTerm]);
+
+    const handleRemoveFilter = (filterToRemove: ActiveFilter) => {
+        const { textQuery, structuredQuery } = parseSearchText(searchTerm);
+
+        if (filterToRemove.type === 'text') {
+            // Remove text query, keep structured
+            setSearchTerm(structuredQuery || '');
+        } else {
+            // Remove specific structured filter
+            const filterRegex = /([a-zA-Z]+)\s*(>=|<=|>|<|=)\s*([\w\d\.]+)/g;
+            let newStructured = structuredQuery || '';
+            const matches = [...newStructured.matchAll(filterRegex)];
+
+            matches.forEach(match => {
+                const fieldAlias = match[1].toLowerCase();
+                const operator = match[2];
+                const value = match[3];
+
+                // Check if this match corresponds to the filter to remove
+                if (
+                    (fieldAlias === filterToRemove.displayName?.toLowerCase() ||
+                        fieldAlias === filterToRemove.type) &&
+                    operator === filterToRemove.operator &&
+                    value === String(filterToRemove.value)
+                ) {
+                    newStructured = newStructured.replace(match[0], '').trim();
+                }
+            });
+
+            setSearchTerm([textQuery, newStructured].filter(Boolean).join(' ').trim());
+        }
+    };
+
+    const handleClearAllFilters = () => {
+        setSearchTerm('');
+    };
+
+    const handleExampleClick = (example: string) => {
+        setSearchTerm(example);
     };
 
     const processedData = useMemo(() => {
@@ -204,7 +306,7 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data, referencePrices 
                             />
                         </div>
 
-                        <SearchHelp />
+                        <SearchHelp onExampleClick={handleExampleClick} />
 
                         <select
                             value={filterType}
@@ -229,6 +331,13 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data, referencePrices 
                         </select>
                     </div>
                 </div>
+
+                {/* Active Filters */}
+                <ActiveFilters
+                    filters={activeFilters}
+                    onRemove={handleRemoveFilter}
+                    onClearAll={handleClearAllFilters}
+                />
 
                 {/* Dynamic Reference Match Panel */}
                 {referenceMatch && (

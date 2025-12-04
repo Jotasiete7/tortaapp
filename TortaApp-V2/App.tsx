@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
 import { MarketTable } from './components/MarketTable';
@@ -20,6 +20,8 @@ import { useAuth } from './contexts/AuthContext';
 import { Globe, LogOut, Shield, Eye, EyeOff, User } from 'lucide-react';
 import { IdentityService } from './services/identity';
 import { supabase } from './services/supabase';
+import { sanitizeItemName, sanitizeSeller } from './services/securityUtils';
+
 const App: React.FC = () => {
     // Use state to lock the callback view so it doesn't unmount if hash is cleared
     const [isCallback, setIsCallback] = useState(false);
@@ -84,23 +86,24 @@ const App: React.FC = () => {
             if (marketData.length === 0 && dataSource === 'NONE') {
                 try {
                     // CHAMADA DIRETA AO SUPABASE (bypass IntelligenceService)
-                    const { data: logs, error } = await supabase.rpc('get_trade_logs_for_market', { 
-                        limit_count: 5000 
+                    // 📊 INCREASED LIMIT: 5000 -> 50000 to match Supabase max_rows config
+                    const { data: logs, error } = await supabase.rpc('get_trade_logs_for_market', {
+                        limit_count: 50000
                     });
-                    
+
                     if (error) {
                         console.error('Supabase RPC error:', error);
                         return;
                     }
-                    
-                    console.log('?? DIRECT CALL: Supabase retornou', logs?.length || 0, 'logs');
-                    
+
+                    console.log('📊 DIRECT CALL: Supabase retornou', logs?.length || 0, 'logs');
+
                     if (logs && logs.length > 0) {
                         const converted: MarketItem[] = logs.map((log: any) => {
                             const raw = log.message || '';
                             let name = raw;
                             let price = 0;
-                            
+
                             price = FileParser.normalizePrice(raw);
                             if (raw.includes('[')) {
                                 const match = raw.match(/\[(.*?)\]/);
@@ -108,7 +111,7 @@ const App: React.FC = () => {
                                     name = match[1];
                                 }
                             }
-                            
+
                             name = name
                                 .replace(/QL:[\d.]+/gi, '')
                                 .replace(/DMG:[\d.]+/gi, '')
@@ -122,11 +125,15 @@ const App: React.FC = () => {
                                 .replace(/\s+/g, ' ')
                                 .trim();
                             name = name.charAt(0).toUpperCase() + name.slice(1);
-                            
+
+                            // 🔒 SECURITY: Sanitize name and seller to remove auth tokens
+                            const safeName = sanitizeItemName(name);
+                            const safeSeller = sanitizeSeller(log.nick || 'Unknown');
+
                             return {
                                 id: String(log.id),
-                                name: name || 'Unknown Item',
-                                seller: log.nick || 'Unknown',
+                                name: safeName,
+                                seller: safeSeller,
                                 price: price,
                                 quantity: 1,
                                 quality: 0,
@@ -139,7 +146,7 @@ const App: React.FC = () => {
                         });
                         setMarketData(converted);
                         setDataSource('DATABASE');
-                        console.log(`? Loaded ${logs.length} records from database (Cleaned & Polished)`);
+                        console.log(`✅ Loaded ${logs.length} records from database (Cleaned & Secured)`);
                     }
                 } catch (error) {
                     console.error('Failed to load from database:', error);
@@ -264,26 +271,26 @@ const App: React.FC = () => {
                                         </button>
                                     </div>
                                 </div>
-                                  {/* Contact Info */}
-                                  <div className="space-y-2 pt-4 border-t border-slate-700/50">
-                                      <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
-                                          <User className="w-4 h-4 text-emerald-500" />
-                                          Developer Contact
-                                      </label>
-                                      <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50 space-y-3">
-                                          <div className="flex items-center justify-between text-sm">
-                                              <span className="text-slate-400">Email:</span>
-                                              <span className="text-white font-mono select-all">tortadev@gmail.com</span>
-                                          </div>
-                                          <div className="flex items-center justify-between text-sm">
-                                              <span className="text-slate-400">In-game Nick:</span>
-                                              <span className="text-amber-400 font-bold">Jotasiete</span>
-                                          </div>
-                                          <p className="text-xs text-slate-500 mt-2 italic">
-                                              Report bugs or send feedback directly.
-                                          </p>
-                                      </div>
-                                  </div>
+                                {/* Contact Info */}
+                                <div className="space-y-2 pt-4 border-t border-slate-700/50">
+                                    <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                                        <User className="w-4 h-4 text-emerald-500" />
+                                        Developer Contact
+                                    </label>
+                                    <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50 space-y-3">
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-slate-400">Email:</span>
+                                            <span className="text-white font-mono select-all">tortadev@gmail.com</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-slate-400">In-game Nick:</span>
+                                            <span className="text-amber-400 font-bold">Jotasiete</span>
+                                        </div>
+                                        <p className="text-xs text-slate-500 mt-2 italic">
+                                            Report bugs or send feedback directly.
+                                        </p>
+                                    </div>
+                                </div>
                                 <div className="pt-6 border-t border-slate-700 space-y-2">
                                     <div className="flex justify-between text-sm">
                                         <span>{t.dataSource}:</span>
