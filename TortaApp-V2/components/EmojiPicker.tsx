@@ -93,6 +93,7 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ onSelect, onClose }) =
                     />
                 </div>
                 <button 
+                    type="button"
                     onClick={onClose}
                     className="p-2 hover:bg-slate-800 rounded text-slate-400 hover:text-white"
                 >
@@ -105,6 +106,7 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ onSelect, onClose }) =
                 {CATEGORIES.map(cat => (
                     <button
                         key={cat.id}
+                        type="button"
                         onClick={() => setCategory(cat.id)}
                         className={`p-2 rounded hover:bg-slate-800 transition-colors ${
                             category === cat.id ? 'bg-amber-500/20 text-amber-500' : 'text-slate-400'
@@ -125,6 +127,7 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ onSelect, onClose }) =
                 {visibleEmojis.map(emoji => (
                     <button
                         key={emoji.hexcode}
+                        type="button"
                         onClick={() => onSelect(emoji)}
                         className="w-10 h-10 p-1 hover:bg-slate-800 rounded flex items-center justify-center transition-transform hover:scale-110"
                         title={emoji.name}

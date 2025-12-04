@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, TickerMessage } from '../services/supabase';
 import { Megaphone } from 'lucide-react';
+import { emojiService } from '../services/emojiService';
 
 export const NewsTicker: React.FC = () => {
     const [messages, setMessages] = useState<TickerMessage[]>([]);
 
     useEffect(() => {
+        // Load emojis
+        emojiService.loadEmojis();
+
         // Fetch initial messages
         fetchMessages();
 
@@ -70,8 +74,20 @@ export const NewsTicker: React.FC = () => {
                                         PAID
                                     </span>
                                 )}
-                                <span className={`${colorMap[msg.color]} font-medium text-sm`}>
-                                    {msg.text}
+                                <span className={`${colorMap[msg.color]} font-medium text-sm flex items-center`}>
+                                    {emojiService.parseText(msg.text).map((part, i) => (
+                                        typeof part === 'string' ? (
+                                            <span key={i}>{part}</span>
+                                        ) : (
+                                            <img 
+                                                key={i} 
+                                                src={part.path} 
+                                                alt={part.alt} 
+                                                className="w-5 h-5 inline-block mx-0.5 align-text-bottom"
+                                                loading="eager"
+                                            />
+                                        )
+                                    ))}
                                 </span>
                                 {index < messages.length - 1 && (
                                     <span className="mx-4 text-slate-600">•</span>
