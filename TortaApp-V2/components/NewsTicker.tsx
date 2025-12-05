@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
-import { Megaphone, Shield, Award, Star, Heart, TrendingUp, Gift, Beaker } from 'lucide-react';
+import { Megaphone, Award } from 'lucide-react';
 import { emojiService } from '../services/emojiService';
 
 // Tipos estendidos para incluir novos campos
@@ -15,11 +15,6 @@ interface TickerMessageExtended {
     created_by_nick?: string | null;
     user_first_badge_id?: string | null;
 }
-
-// Map de ícones de badges
-const BadgeIconMap: Record<string, React.ElementType> = {
-    Shield, Award, Star, Heart, TrendingUp, Gift, Beaker
-};
 
 // Helper para renderizar texto com links
 const renderMessageWithLinks = (text: string): React.ReactNode[] => {
@@ -54,13 +49,9 @@ export const NewsTicker: React.FC = () => {
     });
 
     useEffect(() => {
-        // Load emojis
         emojiService.loadEmojis().then(() => setEmojisLoaded(true));
-
-        // Fetch initial messages
         fetchMessages();
 
-        // Subscribe to realtime updates
         const channel = supabase
             .channel('ticker-updates')
             .on(
@@ -81,7 +72,6 @@ export const NewsTicker: React.FC = () => {
         };
     }, []);
 
-    // Listen for speed changes from localStorage (cross-tab sync)
     useEffect(() => {
         const handleStorageChange = (e: StorageEvent) => {
             if (e.key === 'ticker_speed' && e.newValue) {
@@ -93,8 +83,6 @@ export const NewsTicker: React.FC = () => {
     }, []);
 
     const fetchMessages = async () => {
-        // CORREÇÃO: Removemos o filtro .or() complexo da query que poderia causar problemas
-        // Trazemos as últimas 20 mensagens e filtramos no cliente
         const { data, error } = await supabase
             .from('ticker_messages')
             .select('*')
@@ -102,13 +90,9 @@ export const NewsTicker: React.FC = () => {
             .limit(20);
 
         if (!error && data) {
-            // Filtro Client-Side (Mais robusto contra timezones)
             const now = new Date();
             const validMessages = data.filter(msg => {
-                // Se não tem expires_at, é permanente (true)
                 if (!msg.expires_at) return true;
-
-                // Se tem, verifica se a data de expiração é maior que agora
                 return new Date(msg.expires_at) > now;
             });
 
@@ -116,12 +100,7 @@ export const NewsTicker: React.FC = () => {
         }
     };
 
-    // Wait for emojis to load before rendering
-    if (!emojisLoaded) {
-        return null;
-    }
-
-    if (messages.length === 0) {
+    if (!emojisLoaded || messages.length === 0) {
         return null;
     }
 
@@ -134,58 +113,61 @@ export const NewsTicker: React.FC = () => {
     };
 
     return (
-        <div className="fixed top-0 left-0 right-0 h-8 bg-black border-b border-slate-800 z-50 overflow-hidden">
+        <div className="fixed top-0 left-0 right-0 h-8 bg-black border-b border-slate-800 z-[100] overflow-hidden">
             <div className="flex items-center h-full">
-                <div className="flex-shrink-0 px-3 bg-amber-600 h-full flex items-center">
+                {/* Ícone fixo à esquerda */}
+                <div className="flex-shrink-0 px-3 bg-amber-600 h-full flex items-center justify-center z-20">
                     <Megaphone className="w-4 h-4 text-white" />
                 </div>
-                <div className="flex-1 overflow-hidden relative">
-                    <div className="animate-marquee whitespace-nowrap inline-block">
+
+                {/* Container do Marquee */}
+                <div className="flex-1 overflow-hidden relative h-full flex items-center">
+                    {/* Alinhamento corrigido: flex items-center para centralizar verticalmente */}
+                    <div className="animate-marquee whitespace-nowrap flex items-center h-full">
                         {[...messages, ...messages].map((msg, index) => (
-                            <span key={`${msg.id}-${index}`} className="inline-flex items-center mx-6">
-                                {/* Badge/Label - DIFERENTE para Admin vs Shout Comunitário */}
+                            <div key={`${msg.id}-${index}`} className="flex items-center mx-8 h-full">
+                                {/* Badge/Label */}
                                 {msg.paid && (
                                     msg.created_by_nick ? (
-                                        // SHOUT COMUNITÁRIO - Mostra Nick + Badge em CYAN
-                                        <span className="mr-2 px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/50 text-cyan-400 text-xs font-bold rounded flex items-center gap-1">
+                                        // SHOUT COMUNITÁRIO
+                                        <div className="mr-3 px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/50 text-cyan-400 text-xs font-bold rounded flex items-center gap-1.5 h-6">
                                             {msg.user_first_badge_id && (
-                                                <Award className="w-3 h-3" />
+                                                <Award className="w-3.5 h-3.5" />
                                             )}
-                                            {msg.created_by_nick}
-                                        </span>
+                                            <span className="leading-none pt-0.5">{msg.created_by_nick}</span>
+                                        </div>
                                     ) : (
-                                        // ANÚNCIO ADMIN - Badge PAID amarela tradicional
-                                        <span className="mr-2 px-2 py-0.5 bg-amber-500 text-black text-xs font-bold rounded">
+                                        // ANÚNCIO ADMIN
+                                        <div className="mr-3 px-2 py-0.5 bg-amber-500 text-black text-xs font-bold rounded flex items-center h-5">
                                             PAID
-                                        </span>
+                                        </div>
                                     )
                                 )}
 
-                                {/* Mensagem com Links Clicáveis */}
-                                <span className={`${colorMap[msg.color]} font-medium text-sm flex items-center gap-1`}>
+                                {/* Mensagem */}
+                                <div className={`${colorMap[msg.color]} font-medium text-sm flex items-center gap-1.5 h-full`}>
                                     {emojiService.parseText(msg.text).map((part, i) => (
                                         typeof part === 'string' ? (
-                                            // Renderizar texto com links clicáveis
-                                            <span key={i} className="inline-flex items-center gap-1">
+                                            <span key={i} className="flex items-center">
                                                 {renderMessageWithLinks(part)}
                                             </span>
                                         ) : (
-                                            // Renderizar emoji
                                             <img
                                                 key={i}
                                                 src={part.path}
                                                 alt={part.alt}
-                                                className="w-5 h-5 inline-block mx-0.5 align-text-bottom"
+                                                className="w-5 h-5 object-contain"
                                                 loading="eager"
                                             />
                                         )
                                     ))}
-                                </span>
+                                </div>
 
-                                {index < messages.length - 1 && (
-                                    <span className="mx-4 text-slate-600">•</span>
+                                {/* Separador */}
+                                {index < messages.length * 2 - 1 && (
+                                    <span className="ml-8 text-slate-600 flex items-center h-full">•</span>
                                 )}
-                            </span>
+                            </div>
                         ))}
                     </div>
                 </div>
@@ -193,11 +175,13 @@ export const NewsTicker: React.FC = () => {
 
             <style>{`
         @keyframes marquee {
-          0% { transform: translateX(100%); }
-          100% { transform: translateX(-100%); }
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
         }
         .animate-marquee {
           animation: marquee ${60 / speed}s linear infinite;
+          /* Garante que o conteúdo não quebre linha e tenha largura suficiente */
+          width: max-content;
         }
         .animate-marquee:hover {
           animation-play-state: paused;
