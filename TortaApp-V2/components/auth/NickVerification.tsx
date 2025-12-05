@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Key, Copy, CheckCircle, AlertCircle, RefreshCw, User, Lock } from 'lucide-react';
-import { IdentityService, UserNick } from '../services/identity';
+import { IdentityService, UserNick } from '../../services/identity';
 
 interface NickVerificationProps {
     onSelectProfile?: (nick: string) => void;

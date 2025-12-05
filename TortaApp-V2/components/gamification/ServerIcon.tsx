@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 
 interface ServerIconProps {
     server: string;
@@ -8,17 +8,17 @@ interface ServerIconProps {
 export const ServerIcon: React.FC<ServerIconProps> = ({ server, className = '' }) => {
     const s = (server || '').toLowerCase();
 
-    let emoji = '❓';
+    let emoji = '?';
     let title = server;
 
     if (s.includes('har')) {
-        emoji = '🏞️';
+        emoji = '???';
         title = 'Harmony';
     } else if (s.includes('mel')) {
-        emoji = '⛰️';
+        emoji = '??';
         title = 'Melody';
     } else if (s.includes('cad')) {
-        emoji = '🌊';
+        emoji = '??';
         title = 'Cadence';
     }
 

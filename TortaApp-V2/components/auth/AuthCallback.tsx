@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../services/supabase';
+import { supabase } from '../../services/supabase';
 import { AlertTriangle, CheckCircle, ArrowRight } from 'lucide-react';
 
 export const AuthCallback: React.FC = () => {

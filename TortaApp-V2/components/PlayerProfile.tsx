@@ -1,18 +1,18 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
     Trophy, TrendingUp, User, Activity, Calendar,
     ShoppingCart, Tag, Hash, Clock, ArrowLeft, Server,
     Award, Shield, Star, Heart, Gift, Beaker, Megaphone,
     Scroll
 } from 'lucide-react';
-import { ServerIcon } from './ServerIcon';
-import { BadgeSelector } from './BadgeSelector';
+import { ServerIcon } from './gamification/ServerIcon';
+import { BadgeSelector } from './gamification/BadgeSelector';
 import { BadgeService } from '../services/badgeService';
 import { ShoutService } from '../services/shoutService'; 
 import { UserBadge } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { emojiService } from '../services/emojiService';
-import { GamificationRules } from './GamificationRules';
+import { GamificationRules } from './gamification/GamificationRules';
 import {
     IntelligenceService,
     PlayerStatsAdvanced,
@@ -41,14 +41,14 @@ const BadgeIconMap: Record<string, React.ElementType> = {
 
 // Map Lucide Interface Names -> Emoji Characters for Vivid SVGs
 const BADGE_TO_EMOJI: Record<string, string> = {
-    'Shield': '🛡️',
-    'Award': '🎖️',
-    'Star': '🌟',
-    'Heart': '💜',
-    'Gift': '🎁',
-    'Beaker': '🧪',
-    'TrendingUp': '📈',
-    'Trophy': '🏆'
+    'Shield': 'ðŸ›¡ï¸',
+    'Award': 'ðŸŽ–ï¸',
+    'Star': 'ðŸŒŸ',
+    'Heart': 'ðŸ’œ',
+    'Gift': 'ðŸŽ',
+    'Beaker': 'ðŸ§ª',
+    'TrendingUp': 'ðŸ“ˆ',
+    'Trophy': 'ðŸ†'
 };
 
 // VIBRANT BADGE STYLES
@@ -306,7 +306,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
                             </div>
                             {/* XP Tooltip on Hover */}
                             <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-slate-900 text-xs px-2 py-1 rounded border border-slate-700 text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20">
-                                {currentXP} / {isMaxLevel ? '∞' : nextLevelXP} XP ({Math.round(progressPercent)}%)
+                                {currentXP} / {isMaxLevel ? 'âˆž' : nextLevelXP} XP ({Math.round(progressPercent)}%)
                             </div>
                         </div>
 
@@ -510,3 +510,4 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
         </div>
     );
 };
+

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { BadgeService } from '../services/badgeService';
-import { Badge } from '../types';
+import { BadgeService } from '../../services/badgeService';
+import { Badge } from '../../types';
 import { Shield, Award, Star, Heart, TrendingUp, Gift, Beaker, X, Scroll, Calculator, Clock } from 'lucide-react';
-import { emojiService } from '../services/emojiService';
+import { emojiService } from '../../services/emojiService';
 
 interface GamificationRulesProps {
     isOpen: boolean;

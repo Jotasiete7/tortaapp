@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Trophy, ShoppingBag, ShoppingCart, Search, Calendar, ChevronDown } from 'lucide-react';
-import { RankingsService, MostActiveTrader, ActiveSeller, ActiveBuyer, PriceChecker, TimePeriod } from '../services/rankings';
+import { RankingsService, MostActiveTrader, ActiveSeller, ActiveBuyer, PriceChecker, TimePeriod } from '../../services/rankings';
 
 // ==================== SUB-COMPONENTS ====================
 

@@ -1,10 +1,10 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, Zap, ArrowUpDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Coins, ShoppingBag, Tag, ThumbsUp, ThumbsDown, BookOpen, Layers } from 'lucide-react';
-import { MarketItem } from '../types';
-import { evaluateTrade, formatWurmPrice, findClosestReference } from '../services/priceUtils';
-import { SearchEngine } from '../services/searchEngine';
-import { parseSearchText, getStructuredFilter } from '../services/queryParser';
+import { MarketItem } from '../../types';
+import { evaluateTrade, formatWurmPrice, findClosestReference } from '../../services/priceUtils';
+import { SearchEngine } from '../../services/searchEngine';
+import { parseSearchText, getStructuredFilter } from '../../services/queryParser';
 import { useMarketSearch } from '../hooks/useMarketSearch';
 import { SearchHelp } from './ui/SearchHelp';
 import { ActiveFilters, ActiveFilter } from './ui/ActiveFilters';

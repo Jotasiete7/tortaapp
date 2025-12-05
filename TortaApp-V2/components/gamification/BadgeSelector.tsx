@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Shield, Award, Star, Heart, TrendingUp, Gift, Beaker, Check, X, Loader2 } from 'lucide-react';
-import { BadgeService } from '../services/badgeService';
-import { UserBadge } from '../types';
+import { BadgeService } from '../../services/badgeService';
+import { UserBadge } from '../../types';
 
 interface BadgeSelectorProps {
     userId: string;

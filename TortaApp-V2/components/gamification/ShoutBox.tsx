@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Megaphone, Send, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { ShoutService } from '../services/shoutService';
-import { ShoutBalance } from '../types';
+import { ShoutService } from '../../services/shoutService';
+import { ShoutBalance } from '../../types';
 
 interface ShoutBoxProps {
     userId: string;

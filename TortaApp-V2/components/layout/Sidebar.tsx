@@ -1,9 +1,9 @@
-﻿
+
 import React from 'react';
 import { LayoutDashboard, ShoppingCart, BarChart2, BrainCircuit, Settings, BadgeDollarSign, Shield } from 'lucide-react';
-import { ViewState, Language } from '../types';
-import { translations } from '../services/i18n';
-import { useAuth } from '../contexts/AuthContext';
+import { ViewState, Language } from '../../types';
+import { translations } from '../../services/i18n';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface SidebarProps {
     currentView: ViewState;

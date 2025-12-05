@@ -1,8 +1,8 @@
 
 import React, { useState, useRef } from 'react';
 import { Trash2, Plus, Upload, Download, Search, RefreshCw } from 'lucide-react';
-import { formatWurmPrice, parsePriceCSV } from '../services/priceUtils';
-import { DEFAULT_PRICES_CSV } from '../services/defaultPrices';
+import { formatWurmPrice, parsePriceCSV } from '../../services/priceUtils';
+import { DEFAULT_PRICES_CSV } from '../../services/defaultPrices';
 
 interface PriceManagerProps {
     prices: Record<string, number>;

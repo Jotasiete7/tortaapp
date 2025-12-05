@@ -1,10 +1,10 @@
-import React, { useRef, useMemo, useState } from 'react';
+﻿import React, { useRef, useMemo, useState } from 'react';
 import { ArrowUpRight, ArrowDownRight, Activity, Database, DollarSign, Cpu, Upload, Loader2, Shield, ArrowLeft } from 'lucide-react';
 import { LogUploader } from './LogProcessor/LogUploader';
-import { Leaderboard } from './Leaderboard';
+import { Leaderboard } from './gamification/Leaderboard';
 import { PlayerProfile } from './PlayerProfile';
-import { NickVerification } from './NickVerification';
-import { ShoutBox } from './ShoutBox';
+import { NickVerification } from './auth/NickVerification';
+import { ShoutBox } from './gamification/ShoutBox';
 import { MarketItem, Language } from '../types';
 import { translations } from '../services/i18n';
 import { IntelligenceService, GlobalStats } from '../services/intelligence';
@@ -298,3 +298,4 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
     );
 };
+

@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { Sidebar } from './components/Sidebar';
+﻿import React, { useState, useEffect } from 'react';
+import { Sidebar } from './components/layout/Sidebar';
 import { Dashboard } from './components/Dashboard';
-import { MarketTable } from './components/MarketTable';
+import { MarketTable } from './components/market/MarketTable';
 import { ChartsView } from './components/ChartsView';
-import { MLPredictor } from './components/MLPredictor';
-import { PriceManager } from './components/PriceManager';
-import { Login } from './components/Login';
+import { MLPredictor } from './components/market/MLPredictor';
+import { PriceManager } from './components/market/PriceManager';
+import { Login } from './components/auth/Login';
 import { AdminPanel } from './components/AdminPanel';
-import { NewsTicker } from './components/NewsTicker';
-import { ProtectedAdmin } from './components/ProtectedAdmin';
-import { AuthCallback } from './components/AuthCallback';
+import { NewsTicker } from './components/layout/NewsTicker';
+import { ProtectedAdmin } from './components/auth/ProtectedAdmin';
+import { AuthCallback } from './components/auth/AuthCallback';
 import { ViewState, MarketItem, ChartDataPoint, Language } from './types';
 import { parseTradeFile, FileParser } from './services/fileParser';
 import { generateChartDataFromHistory } from './services/dataUtils';
@@ -86,7 +86,7 @@ const App: React.FC = () => {
             if (marketData.length === 0 && dataSource === 'NONE') {
                 try {
                     // CHAMADA DIRETA AO SUPABASE (bypass IntelligenceService)
-                    // 📊 INCREASED LIMIT: 5000 -> 50000 to match Supabase max_rows config
+                    // ðŸ“Š INCREASED LIMIT: 5000 -> 50000 to match Supabase max_rows config
                     const { data: logs, error } = await supabase.rpc('get_trade_logs_for_market', {
                         limit_count: 50000
                     });
@@ -96,7 +96,7 @@ const App: React.FC = () => {
                         return;
                     }
 
-                    console.log('📊 DIRECT CALL: Supabase retornou', logs?.length || 0, 'logs');
+                    console.log('ðŸ“Š DIRECT CALL: Supabase retornou', logs?.length || 0, 'logs');
 
                     if (logs && logs.length > 0) {
                         const converted: MarketItem[] = logs.map((log: any) => {
@@ -126,7 +126,7 @@ const App: React.FC = () => {
                                 .trim();
                             name = name.charAt(0).toUpperCase() + name.slice(1);
 
-                            // 🔒 SECURITY: Sanitize name and seller to remove auth tokens
+                            // ðŸ”’ SECURITY: Sanitize name and seller to remove auth tokens
                             const safeName = sanitizeItemName(name);
                             const safeSeller = sanitizeSeller(log.nick || 'Unknown');
 
@@ -146,7 +146,7 @@ const App: React.FC = () => {
                         });
                         setMarketData(converted);
                         setDataSource('DATABASE');
-                        console.log(`✅ Loaded ${logs.length} records from database (Cleaned & Secured)`);
+                        console.log(`âœ… Loaded ${logs.length} records from database (Cleaned & Secured)`);
                     }
                 } catch (error) {
                     console.error('Failed to load from database:', error);
@@ -267,7 +267,7 @@ const App: React.FC = () => {
                                             onClick={() => setLanguage('pt')}
                                             className={`py-2 text-sm font-medium rounded-md transition-all ${language === 'pt' ? 'bg-amber-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
                                         >
-                                            Português
+                                            PortuguÃªs
                                         </button>
                                     </div>
                                 </div>
@@ -365,7 +365,7 @@ const App: React.FC = () => {
                                 {/* Email Display - Hidden by default with Toggle */}
                                 <div className="flex items-center gap-2 mt-1 bg-slate-800/50 px-2 py-1 rounded border border-slate-700/50">
                                     <span className="text-xs text-slate-400 font-mono tracking-wide">
-                                        {showEmail ? user.email : '••••••••••••••••'}
+                                        {showEmail ? user.email : 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢'}
                                     </span>
                                     <button
                                         onClick={(e) => {
@@ -395,3 +395,4 @@ const App: React.FC = () => {
     );
 };
 export default App;
+

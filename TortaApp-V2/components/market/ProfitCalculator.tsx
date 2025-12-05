@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calculator, ArrowRight, Coins } from 'lucide-react';
-import { formatWurmPrice } from '../services/priceUtils';
+import { formatWurmPrice } from '../../services/priceUtils';
 
 interface ProfitCalculatorProps {
     fairPrice: number;
