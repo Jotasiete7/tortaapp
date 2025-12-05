@@ -40,5 +40,22 @@ export const ShoutService = {
 
         // RPC returns JSONB: { success: boolean, error?: string, ... }
         return data;
+    },
+
+    /**
+     * Fetches the user's past shouts history.
+     */
+    async getHistory(userId: string): Promise<any[]> {
+        try {
+            const { data, error } = await supabase.rpc('get_user_shout_history', {
+                target_user_id: userId
+            });
+
+            if (error) throw error;
+            return data || [];
+        } catch (error) {
+            console.error('Failed to fetch shout history:', error);
+            return [];
+        }
     }
 };
