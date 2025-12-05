@@ -41,14 +41,26 @@ const BadgeIconMap: Record<string, React.ElementType> = {
 
 // Map Lucide Interface Names -> Emoji Characters for Vivid SVGs
 const BADGE_TO_EMOJI: Record<string, string> = {
-    'Shield': 'ðŸ›¡ï¸',
-    'Award': 'ðŸŽ–ï¸',
-    'Star': 'ðŸŒŸ',
-    'Heart': 'ðŸ’œ',
-    'Gift': 'ðŸŽ',
-    'Beaker': 'ðŸ§ª',
-    'TrendingUp': 'ðŸ“ˆ',
-    'Trophy': 'ðŸ†'
+    'Shield': '🛡️',
+    'Award': '🎖️',
+    'Star': '🌟',
+    'Heart': '💜',
+    'Gift': '🎁',
+    'Beaker': '🧪',
+    'TrendingUp': '📈',
+    'Trophy': '🏆',
+    'Flame': '🔥',
+    'Zap': '⚡',
+    'Crown': '👑',
+    'Diamond': '💎',
+    'Swords': '⚔️',
+    'Scroll': '📜',
+    'Map': '🗺️',
+    'Compass': '🧭',
+    'Anchor': '⚓',
+    'Hammer': '🔨',
+    'Axe': '🪓',
+    'Pickaxe': '⛏️'
 };
 
 // VIBRANT BADGE STYLES
@@ -172,20 +184,18 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
         };
     };
 
-    const renderBadgeIcon = (iconName: string) => {
+        const renderBadgeIcon = (iconName: string) => {
+        // First try native/mapped emoji (Most reliable/beautiful)
         const emojiChar = BADGE_TO_EMOJI[iconName];
-        if (emojiChar && emojisReady) {
-            const emojiData = emojiService.getEmoji(emojiChar);
-            if (emojiData) {
-                return (
-                    <img
-                        src={emojiData.path}
-                        alt={iconName}
-                        className="w-6 h-6 object-contain filter drop-shadow-[0_0_5px_rgba(255,255,255,0.2)] transform hover:scale-110 transition-transform"
-                    />
-                );
-            }
+        if (emojiChar) {
+            return (
+                <span className="text-2xl filter drop-shadow-md select-none transform transition-transform group-hover:scale-110 inline-block">
+                    {emojiChar}
+                </span>
+            );
         }
+        
+        // Fallback to Lucide (Least preferred but safe)
         const LucideIcon = BadgeIconMap[iconName] || Star;
         return <LucideIcon className="w-5 h-5" />;
     };
@@ -231,11 +241,11 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
 
                     {/* AVATAR + LEVEL CIRCLE */}
                     <div className="relative">
-                        <div className="w-24 h-24 rounded-full bg-slate-700 border-4 border-slate-800 shadow-2xl flex items-center justify-center text-4xl font-bold text-amber-500 relative z-10">
+                        <div className="w-28 h-28 rounded-full bg-slate-700 border-4 border-slate-800 shadow-2xl flex items-center justify-center text-5xl font-bold text-amber-500 relative z-10">
                             {stats.nick.charAt(0).toUpperCase()}
                         </div>
                         {/* Level Badge Overlay */}
-                        <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-amber-500 border-2 border-slate-800 text-slate-900 font-bold flex items-center justify-center text-sm z-20 shadow-lg">
+                        <div className="absolute -bottom-1 -right-1 w-10 h-10 rounded-full bg-amber-500 border-2 border-slate-800 text-slate-900 font-bold flex items-center justify-center text-sm z-20 shadow-lg">
                             {level}
                         </div>
                     </div>
@@ -310,19 +320,21 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
                             </div>
                         </div>
 
-                        {/* RANK INFO */}
-                        <div className="flex flex-wrap gap-4 text-sm text-slate-400 mt-4">
-                            <div className="flex items-center gap-1">
-                                <ServerIcon server={stats.fav_server || 'Unknown'} className="text-base" />
-                                <span className="font-bold ml-1">{stats.fav_server || 'Unknown'}</span>
+                                                {/* RANK INFO - Better Distribution */}
+                        <div className="flex flex-wrap items-center gap-4 mt-6 pt-4 border-t border-slate-700/50 w-full">
+                            <div className="flex items-center gap-2 bg-slate-900/50 px-3 py-1.5 rounded-lg border border-slate-700/50">
+                                <ServerIcon server={stats.fav_server || 'Unknown'} className="text-lg" />
+                                <span className="font-bold text-slate-200">{stats.fav_server || 'Unknown'}</span>
+                                <span className="text-[10px] text-slate-500 uppercase tracking-wider ml-1">Server</span>
                             </div>
-                            <div className="flex items-center gap-1">
-                                <Hash className="w-4 h-4 text-slate-500" />
-                                Rank #{stats.rank_position}
+                            <div className="flex items-center gap-2 bg-slate-900/50 px-3 py-1.5 rounded-lg border border-slate-700/50">
+                                <Hash className="w-4 h-4 text-emerald-500" />
+                                <span className="font-bold text-slate-200">#{stats.rank_position}</span>
+                                <span className="text-[10px] text-slate-500 uppercase tracking-wider ml-1">Rank</span>
                             </div>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-2 bg-slate-900/50 px-3 py-1.5 rounded-lg border border-slate-700/50 ml-auto">
                                 <Clock className="w-4 h-4 text-slate-500" />
-                                Last seen {new Date(stats.last_seen).toLocaleDateString()}
+                                <span className="text-xs text-slate-400">Seen: {new Date(stats.last_seen).toLocaleDateString()}</span>
                             </div>
                         </div>
                     </div>
@@ -510,4 +522,6 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
         </div>
     );
 };
+
+
 

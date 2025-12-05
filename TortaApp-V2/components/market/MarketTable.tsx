@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, Zap, ArrowUpDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Coins, ShoppingBag, Tag, ThumbsUp, ThumbsDown, BookOpen, Layers } from 'lucide-react';
 import { MarketItem } from '../../types';
@@ -6,8 +6,8 @@ import { evaluateTrade, formatWurmPrice, findClosestReference } from '../../serv
 import { SearchEngine } from '../../services/searchEngine';
 import { parseSearchText, getStructuredFilter } from '../../services/queryParser';
 import { useMarketSearch } from '../hooks/useMarketSearch';
-import { SearchHelp } from './ui/SearchHelp';
-import { ActiveFilters, ActiveFilter } from './ui/ActiveFilters';
+import { SearchHelp } from '../ui/SearchHelp';
+import { ActiveFilters, ActiveFilter } from '../ui/ActiveFilters';
 
 interface MarketTableProps {
     data: MarketItem[];
@@ -197,10 +197,14 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data, referencePrices 
             } else if (textQuery) {
                 // Fallback if search engine not ready
                 const lowerTerm = textQuery.toLowerCase();
-                result = result.filter(item =>
-                    item.name.toLowerCase().includes(lowerTerm) ||
-                    item.seller.toLowerCase().includes(lowerTerm) ||
-                    item.material.toLowerCase().includes(lowerTerm)
+                                result = result.filter(item => 
+                    item.searchableText 
+                    ? item.searchableText.includes(lowerTerm)
+                    : (
+                        item.name.toLowerCase().includes(lowerTerm) ||
+                        item.seller.toLowerCase().includes(lowerTerm) ||
+                        item.material.toLowerCase().includes(lowerTerm)
+                    )
                 );
             }
 
@@ -213,11 +217,15 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data, referencePrices 
         // FALLBACK: Simple text search
         else if (searchTerm && !useAdvancedSearch) {
             const lowerTerm = searchTerm.toLowerCase();
-            result = result.filter(item =>
-                item.name.toLowerCase().includes(lowerTerm) ||
-                item.seller.toLowerCase().includes(lowerTerm) ||
-                item.material.toLowerCase().includes(lowerTerm)
-            );
+                            result = result.filter(item => 
+                    item.searchableText 
+                    ? item.searchableText.includes(lowerTerm)
+                    : (
+                        item.name.toLowerCase().includes(lowerTerm) ||
+                        item.seller.toLowerCase().includes(lowerTerm) ||
+                        item.material.toLowerCase().includes(lowerTerm)
+                    )
+                );
         }
 
         if (filterRarity !== 'ALL') {
@@ -302,7 +310,7 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data, referencePrices 
                             {useAdvancedSearch && <Zap className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-amber-500 animate-pulse" title="Advanced Search Active" />}<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                             <input
                                 type="text"
-                                placeholder={useAdvancedSearch ? "Try: iron ore ql>90 price<50..." : "Search item, seller..."}
+                                autoComplete="off" placeholder={useAdvancedSearch ? "Try: iron ore ql>90 price<50..." : "Search item, seller..."}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full bg-slate-900 border border-slate-600 text-white pl-9 pr-10 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/50 text-sm"
@@ -555,3 +563,6 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data, referencePrices 
         </div>
     );
 };
+
+
+

@@ -1,4 +1,4 @@
-
+﻿
 /**
  * fileParser.ts
  * Service responsible for parsing and cleaning raw data from Wurm Online logs.
@@ -17,7 +17,7 @@ export interface TradeRecord {
 
 export class FileParser {
 
-    // 1. CONSTANTE: Lista de Termos de Ruído (Stop Words)
+    // 1. CONSTANTE: Lista de Termos de RuÃ­do (Stop Words)
     private static readonly NOISE_TERMS = [
         "You can disable receiving these messages",
         "View the full Trade Chat Etiquette",
@@ -185,9 +185,10 @@ export const parseTradeFile = async (file: File): Promise<MarketItem[]> => {
                     quality: 50, // Default
                     seller: (r.sender || 'Unknown'),
                     timestamp: (r.timestamp ? new Date(r.timestamp).getTime() : Date.now()),
-                    orderType: (r.raw_text ? (r.raw_text.toLowerCase().startsWith('wtb') ? 'WTB' : 'WTS') : 'UNKNOWN'),
+                                        orderType: (r.raw_text ? (r.raw_text.toLowerCase().startsWith('wtb') ? 'WTB' : 'WTS') : 'UNKNOWN'),
                     rarity: 'Common', // Default
-                    material: 'Unknown'
+                    material: 'Unknown',
+                    searchableText: ((r.item_name || '') + ' ' + (r.sender || '') + ' ' + 'Common' + ' ' + 'Unknown').toLowerCase()
                 }));
 
                 resolve(marketItems);
@@ -224,4 +225,5 @@ export const extractNameAndQty = (itemName: string): { cleanName: string, quanti
 
     return { cleanName: itemName, quantity: 1 };
 };
+
 

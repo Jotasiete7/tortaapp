@@ -1,4 +1,4 @@
-
+﻿
 // Data Models based on the implied Python structure
 export interface MarketItem {
     id: string;
@@ -81,3 +81,21 @@ export interface ShoutBalance {
     last_weekly_reset: string;
     last_monthly_reset: string;
 }
+
+export interface UserStreak {
+    user_id: string;
+    current_streak: number;
+    total_logins: number;
+    last_claim_at: string | null;
+    created_at: string;
+}
+
+export interface DailyClaimResult {
+    success: boolean;
+    error?: string;
+    new_streak: number;
+    xp_gained?: number;
+    bonus_shouts?: number;
+    earned_badge?: boolean;
+}
+

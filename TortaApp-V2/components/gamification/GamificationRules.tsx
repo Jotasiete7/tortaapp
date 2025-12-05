@@ -1,8 +1,11 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { BadgeService } from '../../services/badgeService';
+import { supabase } from '../../services/supabase';
 import { Badge } from '../../types';
 import { Shield, Award, Star, Heart, TrendingUp, Gift, Beaker, X, Scroll, Calculator, Clock } from 'lucide-react';
 import { emojiService } from '../../services/emojiService';
+import { GamificationService } from '../../services/GamificationService';
+import { toast } from 'sonner';
 
 interface GamificationRulesProps {
     isOpen: boolean;
@@ -16,14 +19,14 @@ const IconMap: Record<string, React.ElementType> = {
 };
 
 const BADGE_TO_EMOJI: Record<string, string> = {
-    'Shield': '🛡️',
-    'Award': '🎖️',
-    'Star': '🌟',
-    'Heart': '💜',
-    'Gift': '🎁',
-    'Beaker': '🧪',
-    'TrendingUp': '📈',
-    'Trophy': '🏆'
+    'Shield': 'ðŸ›¡ï¸',
+    'Award': 'ðŸŽ–ï¸',
+    'Star': 'ðŸŒŸ',
+    'Heart': 'ðŸ’œ',
+    'Gift': 'ðŸŽ',
+    'Beaker': 'ðŸ§ª',
+    'TrendingUp': 'ðŸ“ˆ',
+    'Trophy': 'ðŸ†'
 };
 
 const LEVEL_TABLE = [
@@ -45,6 +48,8 @@ export const GamificationRules: React.FC<GamificationRulesProps> = ({ isOpen, on
     const [badges, setBadges] = useState<Badge[]>([]);
     const [loading, setLoading] = useState(true);
     const [emojisReady, setEmojisReady] = useState(false);
+    const [dailyClaimed, setDailyClaimed] = useState(false);
+    const [streak, setStreak] = useState(0);
 
     useEffect(() => {
         if (isOpen) {
@@ -52,12 +57,42 @@ export const GamificationRules: React.FC<GamificationRulesProps> = ({ isOpen, on
             emojiService.loadEmojis().then(() => setEmojisReady(true));
         }
     }, [isOpen]);
-
     const loadData = async () => {
         setLoading(true);
         const allBadges = await BadgeService.getAllBadges();
         setBadges(allBadges);
+        
+        // Load Streak
+        const userId = (await supabase.auth.getUser()).data.user?.id;
+        if (userId) {
+            const streakData = await GamificationService.getStreak(userId);
+            if (streakData) {
+                setStreak(streakData.current_streak);
+                const lastClaim = streakData.last_claim_at ? new Date(streakData.last_claim_at) : null;
+                const today = new Date();
+                if (lastClaim && lastClaim.toDateString() === today.toDateString()) {
+                    setDailyClaimed(true);
+                }
+            }
+        }
         setLoading(false);
+    };
+
+    const handleDailyCheckIn = async () => {
+        try {
+            const result = await GamificationService.claimDailyReward();
+            if (result.success) {
+                setStreak(result.new_streak);
+                setDailyClaimed(true);
+                toast.success('Daily Bonus! +10 XP. Streak: ' + result.new_streak + ' days!');
+                if (result.bonus_shouts) toast.success('Bonus! +' + result.bonus_shouts + ' Shouts!');
+                if (result.earned_badge) toast.success('New Badge Unlocked: Dedicated!');
+            } else {
+                toast.error(result.error || 'Failed to claim bonus.');
+            }
+        } catch (error) {
+            toast.error('Error claiming daily bonus.');
+        }
     };
 
     const renderIcon = (iconName: string) => {
@@ -146,6 +181,27 @@ export const GamificationRules: React.FC<GamificationRulesProps> = ({ isOpen, on
                                     <Clock className="w-4 h-4 flex-shrink-0" />
                                     xp updates are processed every ~5 minutes or on page refresh.
                                 </div>
+                                <button
+                                    onClick={handleDailyCheckIn}
+                                    disabled={dailyClaimed || loading}
+                                                                        className={`w-full mt-4 py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-all ${
+                                        dailyClaimed 
+                                        ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                                        : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg hover:shadow-emerald-500/25'
+                                    }`}
+                                >
+                                    {dailyClaimed ? (
+                                        <>
+                                            <Shield className='w-5 h-5' />
+                                            Daily Claimed (Streak: {streak})
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Gift className='w-5 h-5' />
+                                            Daily Check-in (+10 XP)
+                                        </>
+                                    )}
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -212,3 +268,6 @@ export const GamificationRules: React.FC<GamificationRulesProps> = ({ isOpen, on
         </div>
     );
 };
+
+
+
