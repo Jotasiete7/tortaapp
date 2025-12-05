@@ -1,10 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, TickerMessage } from '../services/supabase';
+import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ProtectedAdmin } from '../components/ProtectedAdmin';
-import { Megaphone, Plus, Trash2, Clock, Database, Smile, Gauge } from 'lucide-react';
+import { Megaphone, Plus, Trash2, Clock, Database, Smile, Gauge, Search, AlertTriangle, Trash } from 'lucide-react';
 import { EmojiPicker } from './EmojiPicker';
 import { BulkDataUploader } from '../services/logProcessing';
+
+// Interface estendida para mensagens
+interface TickerMessageExtended {
+    id: number;
+    text: string;
+    color: string;
+    paid: boolean;
+    created_at: string;
+    expires_at?: string | null;
+    created_by?: string | null;
+    created_by_nick?: string | null;
+    user_first_badge_id?: string | null;
+}
 
 export const AdminPanel: React.FC = () => {
     return (
@@ -17,7 +30,7 @@ export const AdminPanel: React.FC = () => {
 const AdminPanelContent: React.FC = () => {
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState<'ticker' | 'upload'>('ticker');
-    const [messages, setMessages] = useState<TickerMessage[]>([]);
+    const [messages, setMessages] = useState<TickerMessageExtended[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [color, setColor] = useState<'green' | 'red' | 'yellow' | 'cyan' | 'purple'>('green');
     const [isPaid, setIsPaid] = useState(false);
@@ -28,6 +41,11 @@ const AdminPanelContent: React.FC = () => {
         const saved = localStorage.getItem('ticker_speed');
         return saved ? parseFloat(saved) : 1;
     });
+
+    // NOVOS ESTADOS - Moderação
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterType, setFilterType] = useState<'all' | 'admin' | 'shout'>('all');
+    const [cleanupLoading, setCleanupLoading] = useState(false);
 
     useEffect(() => {
         fetchMessages();
@@ -111,6 +129,27 @@ const AdminPanelContent: React.FC = () => {
         }
     };
 
+    // NOVA FUNÇÃO - Cleanup de shouts expirados
+    const handleCleanupExpired = async () => {
+        if (!confirm('Delete all expired shouts? This cannot be undone.')) return;
+
+        setCleanupLoading(true);
+        try {
+            const { data, error } = await supabase.rpc('cleanup_expired_shouts');
+
+            if (error) throw error;
+
+            if (data && data.length > 0) {
+                alert(`✅ ${data[0].message}`);
+                fetchMessages();
+            }
+        } catch (err: any) {
+            alert('Error cleaning up: ' + err.message);
+        } finally {
+            setCleanupLoading(false);
+        }
+    };
+
     const handleSpeedChange = (newSpeed: number) => {
         setTickerSpeed(newSpeed);
         localStorage.setItem('ticker_speed', newSpeed.toString());
@@ -128,6 +167,27 @@ const AdminPanelContent: React.FC = () => {
         { value: 'cyan', label: 'Cyan', class: 'bg-cyan-500' },
         { value: 'purple', label: 'Purple', class: 'bg-purple-500' }
     ];
+
+    // FILTROS E ESTATÍSTICAS
+    const filteredMessages = messages.filter(msg => {
+        // Filtro por tipo
+        if (filterType === 'admin' && msg.created_by_nick) return false;
+        if (filterType === 'shout' && !msg.created_by_nick) return false;
+
+        // Filtro por busca de texto
+        if (searchTerm && !msg.text.toLowerCase().includes(searchTerm.toLowerCase())) {
+            return false;
+        }
+
+        return true;
+    });
+
+    const stats = {
+        total: messages.length,
+        admin: messages.filter(m => !m.created_by_nick).length,
+        shouts: messages.filter(m => m.created_by_nick).length,
+        expired: messages.filter(m => m.expires_at && new Date(m.expires_at) < new Date()).length
+    };
 
     return (
         <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
@@ -149,8 +209,8 @@ const AdminPanelContent: React.FC = () => {
                 <button
                     onClick={() => setActiveTab('ticker')}
                     className={`px-6 py-3 font-medium text-sm transition-all border-b-2 ${activeTab === 'ticker'
-                            ? 'border-amber-500 text-amber-500'
-                            : 'border-transparent text-slate-400 hover:text-slate-200'
+                        ? 'border-amber-500 text-amber-500'
+                        : 'border-transparent text-slate-400 hover:text-slate-200'
                         }`}
                 >
                     <div className="flex items-center gap-2">
@@ -161,8 +221,8 @@ const AdminPanelContent: React.FC = () => {
                 <button
                     onClick={() => setActiveTab('upload')}
                     className={`px-6 py-3 font-medium text-sm transition-all border-b-2 ${activeTab === 'upload'
-                            ? 'border-amber-500 text-amber-500'
-                            : 'border-transparent text-slate-400 hover:text-slate-200'
+                        ? 'border-amber-500 text-amber-500'
+                        : 'border-transparent text-slate-400 hover:text-slate-200'
                         }`}
                 >
                     <div className="flex items-center gap-2">
@@ -216,22 +276,15 @@ const AdminPanelContent: React.FC = () => {
                                         <button
                                             key={preset}
                                             onClick={() => handleSpeedChange(preset)}
-                                            className={`py-2 px-3 rounded-lg font-medium text-sm transition-all ${tickerSpeed === preset
-                                                    ? 'bg-amber-600 text-white shadow-lg shadow-amber-900/20'
-                                                    : 'bg-slate-900 text-slate-400 hover:bg-slate-700 hover:text-white border border-slate-700'
+                                            className={`py2 px-3 rounded-lg font-medium text-sm transition-all ${tickerSpeed === preset
+                                                ? 'bg-amber-600 text-white shadow-lg shadow-amber-900/20'
+                                                : 'bg-slate-900 text-slate-400 hover:bg-slate-700 hover:text-white border border-slate-700'
                                                 }`}
                                         >
                                             {preset}x
                                         </button>
                                     ))}
                                 </div>
-                            </div>
-
-                            {/* Info */}
-                            <div className="bg-slate-900/50 border border-slate-700/50 rounded-lg p-3">
-                                <p className="text-xs text-slate-400">
-                                    💡 <strong>Tip:</strong> Higher values make the ticker scroll faster. Changes apply immediately and persist across sessions.
-                                </p>
                             </div>
                         </div>
                     </div>
@@ -343,28 +396,88 @@ const AdminPanelContent: React.FC = () => {
                         </form>
                     </div>
 
-                    {/* Messages List */}
+                    {/* NOVA SEÇÃO - Moderação de Mensagens */}
                     <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-                        <h3 className="text-xl font-bold text-white mb-4">
-                            Active Messages ({messages.length})
-                        </h3>
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-xl font-bold text-white">
+                                Message Moderation
+                            </h3>
 
-                        {messages.length === 0 ? (
+                            {/* Botão Cleanup */}
+                            <button
+                                onClick={handleCleanupExpired}
+                                disabled={cleanupLoading || stats.expired === 0}
+                                className="flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-sm font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <Trash className="w-4 h-4" />
+                                {cleanupLoading ? 'Cleaning...' : `Delete Expired (${stats.expired})`}
+                            </button>
+                        </div>
+
+                        {/* Estatísticas */}
+                        <div className="grid grid-cols-4 gap-4 mb-6">
+                            <div className="bg-slate-900/50 border border-slate-700 rounded-lg p-3">
+                                <div className="text-2xl font-bold text-white">{stats.total}</div>
+                                <div className="text-xs text-slate-400">Total Messages</div>
+                            </div>
+                            <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+                                <div className="text-2xl font-bold text-amber-400">{stats.admin}</div>
+                                <div className="text-xs text-slate-400">Admin Posts</div>
+                            </div>
+                            <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-3">
+                                <div className="text-2xl font-bold text-cyan-400">{stats.shouts}</div>
+                                <div className="text-xs text-slate-400">User Shouts</div>
+                            </div>
+                            <div className="bg-rose-500/10 border border-rose-500/30 rounded-lg p-3">
+                                <div className="text-2xl font-bold text-rose-400">{stats.expired}</div>
+                                <div className="text-xs text-slate-400">Expired</div>
+                            </div>
+                        </div>
+
+                        {/* Filtros */}
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                            {/* Busca de Texto */}
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                <input
+                                    type="text"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    placeholder="Search messages..."
+                                    className="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder:text-slate-600 focus:ring-2 focus:ring-amber-500/50 outline-none text-sm"
+                                />
+                            </div>
+
+                            {/* Filtro por Tipo */}
+                            <select
+                                value={filterType}
+                                onChange={(e) => setFilterType(e.target.value as any)}
+                                className="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-amber-500/50 outline-none text-sm"
+                            >
+                                <option value="all">All Messages</option>
+                                <option value="admin">Admin Only</option>
+                                <option value="shout">Shouts Only</option>
+                            </select>
+                        </div>
+
+                        {/* Lista de Mensagens Filtradas */}
+                        {filteredMessages.length === 0 ? (
                             <div className="text-center py-12 text-slate-500">
                                 <Megaphone className="w-12 h-12 mx-auto mb-2 opacity-20" />
-                                <p>No messages yet. Add your first one above!</p>
+                                <p>No messages found matching your filters.</p>
                             </div>
                         ) : (
                             <div className="space-y-2">
-                                {messages.map((msg) => {
+                                {filteredMessages.map((msg) => {
                                     const isExpired = msg.expires_at && new Date(msg.expires_at) < new Date();
+                                    const isShout = !!msg.created_by_nick;
                                     const colorClass = {
                                         green: 'text-emerald-400',
                                         red: 'text-rose-400',
                                         yellow: 'text-yellow-400',
                                         cyan: 'text-cyan-400',
                                         purple: 'text-purple-400'
-                                    }[msg.color];
+                                    }[msg.color] || 'text-white';
 
                                     return (
                                         <div
@@ -373,14 +486,27 @@ const AdminPanelContent: React.FC = () => {
                                                 } flex items-start justify-between gap-4`}
                                         >
                                             <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    {msg.paid && (
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    {/* Badge de Tipo */}
+                                                    {isShout ? (
+                                                        <span className="px-2 py-0.5 bg-cyan-500/20 border border-cyan-500/50 text-cyan-400 text-xs font-bold rounded flex items-center gap-1">
+                                                            <Megaphone className="w-3 h-3" />
+                                                            SHOUT: {msg.created_by_nick}
+                                                        </span>
+                                                    ) : (
                                                         <span className="px-2 py-0.5 bg-amber-500 text-black text-xs font-bold rounded">
+                                                            ADMIN
+                                                        </span>
+                                                    )}
+
+                                                    {msg.paid && !isShout && (
+                                                        <span className="px-2 py-0.5 bg-amber-500/20 border border-amber-500/50 text-amber-400 text-xs font-bold rounded">
                                                             PAID
                                                         </span>
                                                     )}
                                                     {isExpired && (
-                                                        <span className="px-2 py-0.5 bg-slate-700 text-slate-400 text-xs font-bold rounded">
+                                                        <span className="px-2 py-0.5 bg-rose-500/20 border border-rose-500/50 text-rose-400 text-xs font-bold rounded flex items-center gap-1">
+                                                            <AlertTriangle className="w-3 h-3" />
                                                             EXPIRED
                                                         </span>
                                                     )}

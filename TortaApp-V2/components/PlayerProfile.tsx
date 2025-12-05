@@ -9,6 +9,7 @@ import { BadgeSelector } from './BadgeSelector';
 import { BadgeService } from '../services/badgeService';
 import { UserBadge } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { emojiService } from '../services/emojiService';
 import {
     IntelligenceService,
     PlayerStatsAdvanced,
@@ -21,30 +22,42 @@ interface PlayerProfileProps {
     onBack: () => void;
 }
 
-// Map icon names to Lucide components for badges
+// Map icon names to Lucide components for badges (FALLBACK)
 const BadgeIconMap: Record<string, React.ElementType> = {
     Shield, Award, Star, Heart, TrendingUp, Gift, Beaker
 };
 
-// VIBRANT BADGE STYLES
+// Map Lucide Interface Names -> Emoji Characters for Vivid SVGs
+const BADGE_TO_EMOJI: Record<string, string> = {
+    'Shield': '🛡️',
+    'Award': '🎖️',
+    'Star': '🌟',
+    'Heart': '💜',
+    'Gift': '🎁',
+    'Beaker': '🧪',
+    'TrendingUp': '📈',
+    'Trophy': '🏆'
+};
+
+// VIBRANT BADGE STYLES (Glows & Borders)
 const BADGE_STYLES: Record<string, string> = {
     // Admin / Prestígio (Gold)
-    red: "text-red-400 bg-red-500/10 border-red-500/50 shadow-[0_0_12px_rgba(248,113,113,0.2)]",
-    gold: "text-amber-300 bg-amber-500/10 border-amber-400/50 shadow-[0_0_12px_rgba(251,191,36,0.3)]",
-    amber: "text-amber-400 bg-amber-500/10 border-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.2)]",
-    yellow: "text-yellow-400 bg-yellow-500/10 border-yellow-500/50 shadow-[0_0_10px_rgba(250,204,21,0.2)]",
+    red: "text-red-400 bg-red-500/10 border-red-500/50 shadow-[0_0_15px_rgba(248,113,113,0.2)]",
+    gold: "text-amber-300 bg-amber-500/10 border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.2)]",
+    amber: "text-amber-400 bg-amber-500/10 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.2)]",
+    yellow: "text-yellow-400 bg-yellow-500/10 border-yellow-500/50 shadow-[0_0_15px_rgba(250,204,21,0.2)]",
 
     // Tech / Beta (Cyan/Blue)
-    cyan: "text-cyan-400 bg-cyan-500/10 border-cyan-500/50 shadow-[0_0_12px_rgba(34,211,238,0.3)]",
-    blue: "text-blue-400 bg-blue-500/10 border-blue-500/50 shadow-[0_0_10px_rgba(96,165,250,0.2)]",
+    cyan: "text-cyan-400 bg-cyan-500/10 border-cyan-500/50 shadow-[0_0_15px_rgba(34,211,238,0.2)]",
+    blue: "text-blue-400 bg-blue-500/10 border-blue-500/50 shadow-[0_0_15px_rgba(96,165,250,0.2)]",
 
     // Supporter (Purple/Pink)
-    purple: "text-purple-400 bg-purple-500/10 border-purple-500/50 shadow-[0_0_12px_rgba(192,132,252,0.3)]",
-    pink: "text-pink-400 bg-pink-500/10 border-pink-500/50 shadow-[0_0_10px_rgba(244,114,182,0.2)]",
+    purple: "text-purple-400 bg-purple-500/10 border-purple-500/50 shadow-[0_0_15px_rgba(192,132,252,0.2)]",
+    pink: "text-pink-400 bg-pink-500/10 border-pink-500/50 shadow-[0_0_15px_rgba(244,114,182,0.2)]",
 
-    // Market / Economy (Green/Orange)
-    emerald: "text-emerald-400 bg-emerald-500/10 border-emerald-500/50 shadow-[0_0_10px_rgba(52,211,153,0.2)]",
-    orange: "text-orange-400 bg-orange-500/10 border-orange-500/50 shadow-[0_0_12px_rgba(251,146,60,0.3)]",
+    // Market / Ecomm
+    emerald: "text-emerald-400 bg-emerald-500/10 border-emerald-500/50 shadow-[0_0_15px_rgba(52,211,153,0.2)]",
+    orange: "text-orange-400 bg-orange-500/10 border-orange-500/50 shadow-[0_0_15px_rgba(251,146,60,0.2)]",
 
     // Default
     slate: "text-slate-400 bg-slate-500/10 border-slate-500/50",
@@ -56,6 +69,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
     const [activity, setActivity] = useState<ActivityPoint[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'overview' | 'history'>('overview');
+    const [emojisReady, setEmojisReady] = useState(false);
 
     // Badge system state
     const [badges, setBadges] = useState<UserBadge[]>([]);
@@ -63,11 +77,11 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
     const { user } = useAuth();
 
     useEffect(() => {
+        emojiService.loadEmojis().then(() => setEmojisReady(true));
         loadProfileData();
     }, [nick]);
 
     useEffect(() => {
-        // Load badges if we have stats and this is the current user's profile
         if (user && stats && stats.nick.toLowerCase() === nick.toLowerCase()) {
             loadBadges(user.id);
         }
@@ -78,7 +92,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
         try {
             const [statsData, logsData, activityData] = await Promise.all([
                 IntelligenceService.getPlayerStatsAdvanced(nick),
-                IntelligenceService.getPlayerLogs(nick, 20), // Last 20 logs
+                IntelligenceService.getPlayerLogs(nick, 20),
                 IntelligenceService.getPlayerActivity(nick)
             ]);
 
@@ -95,12 +109,34 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
     const loadBadges = async (userId: string) => {
         try {
             const userBadges = await BadgeService.getUserBadges(userId);
-            // Filter only displayed badges
             const displayed = userBadges.filter(ub => ub.is_displayed);
             setBadges(displayed);
         } catch (error) {
             console.error('Failed to load badges', error);
         }
+    };
+
+    // Helper to render badge icon (Emoji SVG or Lucide Fallback)
+    const renderBadgeIcon = (iconName: string) => {
+        // 1. Try to find an Emoji mapping
+        const emojiChar = BADGE_TO_EMOJI[iconName];
+        if (emojiChar && emojisReady) {
+            const emojiData = emojiService.getEmoji(emojiChar);
+            if (emojiData) {
+                return (
+                    <img
+                        src={emojiData.path}
+                        alt={iconName}
+                        // AUMENTAMOS O TAMANHO DO EMOJI AQUI (w-6 h-6)
+                        className="w-6 h-6 object-contain filter drop-shadow-[0_0_5px_rgba(255,255,255,0.2)] transform hover:scale-110 transition-transform"
+                    />
+                );
+            }
+        }
+
+        // 2. Fallback to Lucide Icon
+        const LucideIcon = BadgeIconMap[iconName] || Star;
+        return <LucideIcon className="w-5 h-5" />;
     };
 
     if (loading) {
@@ -120,7 +156,6 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
         );
     }
 
-    // Determine Prestige Title based on stats
     const getTitle = () => {
         if (stats.rank_position <= 3) return "Market Mogul";
         if (stats.total > 1000) return "Trade Veteran";
@@ -142,9 +177,14 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
             </button>
 
             {/* 1.Prestige Section */}
-            <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-10">
-                    <Trophy className="w-32 h-32 text-amber-500" />
+            {/* REMOVIDO overflow-hidden global para permitir tooltips */}
+            <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 relative">
+
+                {/* Decoration Container Isolated (with overflow hidden) */}
+                <div className="absolute inset-0 overflow-hidden rounded-xl pointer-events-none">
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                        <Trophy className="w-32 h-32 text-amber-500" />
+                    </div>
                 </div>
 
                 <div className="flex flex-col md:flex-row items-start md:items-center gap-6 relative z-10">
@@ -159,40 +199,51 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
                                 {getTitle()}
                             </span>
 
-                            {/* Display Badges VIBRANTES + TOOLTIPS */}
+                            {/* Display Badges */}
                             {badges.length > 0 && (
-                                <div className="flex items-center gap-2 ml-2">
+                                <div className="flex items-center gap-3 ml-3">
                                     {badges.map((ub) => {
-                                        const BadgeIcon = ub.badge?.icon_name
-                                            ? BadgeIconMap[ub.badge.icon_name] || Star
-                                            : Star;
-
-                                        // Mapear cor do banco para estilo vibrante ou usar fallback
                                         const colorKey = ub.badge?.color || 'amber';
                                         const styleClass = BADGE_STYLES[colorKey] || BADGE_STYLES['slate'];
+                                        const iconName = ub.badge?.icon_name || 'Star';
 
                                         return (
                                             <div
                                                 key={ub.id}
-                                                className="group relative" // Necessário para o Tooltip
+                                                className="group relative inline-block text-left" // Ensure stacking context
+                                                style={{ zIndex: 50 }}
                                             >
-                                                {/* Badge Icon */}
-                                                <div className={`p-1.5 rounded-full border transition-all hover:scale-110 cursor-help ${styleClass}`}>
-                                                    <BadgeIcon className="w-4 h-4" />
+                                                {/* Badge Icon Container - AUMENTADO PADDING (p-2) */}
+                                                <div className={`
+                                                    p-2 rounded-full border transition-all cursor-help
+                                                    ${styleClass} hover:brightness-125
+                                                `}>
+                                                    {renderBadgeIcon(iconName)}
                                                 </div>
 
-                                                {/* CUSTOM TOOLTIP */}
-                                                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 hidden group-hover:block transition-all z-50">
-                                                    <div className="bg-slate-900 text-white text-xs rounded-lg p-3 shadow-xl border border-slate-700 relative">
-                                                        {/* Seta do tooltip */}
-                                                        <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-900 border-b border-r border-slate-700 rotate-45"></div>
+                                                {/* TOOLTIP MOVED TO BOTTOM (mt-3 top-full) */}
+                                                <div className="absolute top-full mt-3 left-1/2 -translate-x-1/2 w-64 hidden group-hover:block transition-all z-[100] animate-fade-in-up">
+                                                    <div className="bg-slate-950/95 backdrop-blur-md text-white rounded-xl p-4 shadow-2xl border border-slate-700 relative">
+                                                        {/* Seta do tooltip (inverted to top) */}
+                                                        <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-950 border-t border-l border-slate-700 rotate-45"></div>
 
-                                                        <p className={`font-bold uppercase mb-1 ${styleClass.split(' ')[0]}`}>
-                                                            {ub.badge?.name}
-                                                        </p>
-                                                        <p className="text-slate-400 font-medium leading-relaxed">
+                                                        {/* Header com Ícone Pequeno e Nome */}
+                                                        <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-800">
+                                                            <span className={`font-bold uppercase tracking-wide text-xs ${styleClass.split(' ')[0]}`}>
+                                                                {ub.badge?.name}
+                                                            </span>
+                                                        </div>
+
+                                                        {/* Descrição */}
+                                                        <p className="text-slate-300 text-xs leading-relaxed">
                                                             {ub.badge?.description}
                                                         </p>
+
+                                                        {/* Earned Date */}
+                                                        <div className="mt-2 text-[10px] text-slate-500 font-mono text-right flex justify-between items-center">
+                                                            <span>EARNED</span>
+                                                            <span>{new Date(ub.earned_at).toLocaleDateString()}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -201,19 +252,19 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
                                 </div>
                             )}
 
-                            {/* Manage Badges Button - Only for own profile */}
+                            {/* Manage Badges */}
                             {user && stats.nick.toLowerCase() === nick.toLowerCase() && (
                                 <button
                                     onClick={() => setShowBadgeSelector(true)}
-                                    className="flex items-center gap-1 px-2 py-1 text-xs bg-slate-700/50 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors text-slate-300 hover:text-white"
+                                    className="flex items-center gap-1 px-3 py-1.5 text-xs bg-slate-700/50 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors text-slate-300 hover:text-white ml-2"
                                 >
                                     <Award className="w-3 h-3" />
-                                    Manage Badges
+                                    Manage
                                 </button>
                             )}
                         </div>
 
-                        <div className="flex flex-wrap gap-4 text-sm text-slate-400">
+                        <div className="flex flex-wrap gap-4 text-sm text-slate-400 mt-2">
                             <div className="flex items-center gap-1">
                                 <ServerIcon server={stats.fav_server || 'Unknown'} className="text-base" />
                                 <span className="font-bold ml-1">
