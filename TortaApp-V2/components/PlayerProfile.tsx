@@ -1,9 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import {
     Trophy, TrendingUp, User, Activity, Calendar,
-    ShoppingCart, Tag, Hash, Clock, ArrowLeft, Server
+    ShoppingCart, Tag, Hash, Clock, ArrowLeft, Server,
+    Award, Shield, Star, Heart, Gift, Beaker
 } from 'lucide-react';
 import { ServerIcon } from './ServerIcon';
+import { BadgeSelector } from './BadgeSelector';
+import { BadgeService } from '../services/badgeService';
+import { UserBadge } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 import {
     IntelligenceService,
     PlayerStatsAdvanced,
@@ -16,6 +21,11 @@ interface PlayerProfileProps {
     onBack: () => void;
 }
 
+// Map icon names to Lucide components for badges
+const BadgeIconMap: Record<string, React.ElementType> = {
+    Shield, Award, Star, Heart, TrendingUp, Gift, Beaker
+};
+
 export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) => {
     const [stats, setStats] = useState<PlayerStatsAdvanced | null>(null);
     const [logs, setLogs] = useState<PlayerLog[]>([]);
@@ -23,9 +33,21 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'overview' | 'history'>('overview');
 
+    // Badge system state
+    const [badges, setBadges] = useState<UserBadge[]>([]);
+    const [showBadgeSelector, setShowBadgeSelector] = useState(false);
+    const { user } = useAuth();
+
     useEffect(() => {
         loadProfileData();
     }, [nick]);
+
+    useEffect(() => {
+        // Load badges if we have stats and this is the current user's profile
+        if (user && stats && stats.nick.toLowerCase() === nick.toLowerCase()) {
+            loadBadges(user.id);
+        }
+    }, [user, stats, nick]);
 
     const loadProfileData = async () => {
         setLoading(true);
@@ -43,6 +65,17 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
             console.error("Failed to load player profile", error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadBadges = async (userId: string) => {
+        try {
+            const userBadges = await BadgeService.getUserBadges(userId);
+            // Filter only displayed badges
+            const displayed = userBadges.filter(ub => ub.is_displayed);
+            setBadges(displayed);
+        } catch (error) {
+            console.error('Failed to load badges', error);
         }
     };
 
@@ -84,7 +117,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
                 Back to Dashboard
             </button>
 
-            {/* 1. Prestige Section */}
+            {/* 1.Prestige Section */}
             <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-10">
                     <Trophy className="w-32 h-32 text-amber-500" />
@@ -96,11 +129,44 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
                     </div>
 
                     <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-1">
+                        <div className="flex items-center gap-3 mb-1 flex-wrap">
                             <h1 className="text-3xl font-bold text-white capitalize">{stats.nick}</h1>
                             <span className="bg-amber-500/20 text-amber-500 text-xs px-2 py-1 rounded border border-amber-500/50 font-medium">
                                 {getTitle()}
                             </span>
+
+                            {/* Display Badges */}
+                            {badges.length > 0 && (
+                                <div className="flex items-center gap-2">
+                                    {badges.map((ub) => {
+                                        const BadgeIcon = ub.badge?.icon_name
+                                            ? BadgeIconMap[ub.badge.icon_name] || Star
+                                            : Star;
+                                        const colorClass = ub.badge?.color || 'amber';
+
+                                        return (
+                                            <div
+                                                key={ub.id}
+                                                title={`${ub.badge?.name}: ${ub.badge?.description}`}
+                                                className={`p-1.5 rounded-full bg-${colorClass}-500/10 border border-${colorClass}-500/50`}
+                                            >
+                                                <BadgeIcon className={`w-4 h-4 text-${colorClass}-500`} />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {/* Manage Badges Button - Only for own profile */}
+                            {user && stats.nick.toLowerCase() === nick.toLowerCase() && (
+                                <button
+                                    onClick={() => setShowBadgeSelector(true)}
+                                    className="flex items-center gap-1 px-2 py-1 text-xs bg-slate-700/50 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors text-slate-300 hover:text-white"
+                                >
+                                    <Award className="w-3 h-3" />
+                                    Manage Badges
+                                </button>
+                            )}
                         </div>
 
                         <div className="flex flex-wrap gap-4 text-sm text-slate-400">
@@ -298,6 +364,16 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
                         ))}
                     </div>
                 </div>
+            )}
+
+            {/* Badge Selector Modal */}
+            {user && showBadgeSelector && (
+                <BadgeSelector
+                    userId={user.id}
+                    isOpen={showBadgeSelector}
+                    onClose={() => setShowBadgeSelector(false)}
+                    onUpdate={() => loadBadges(user.id)}
+                />
             )}
         </div>
     );

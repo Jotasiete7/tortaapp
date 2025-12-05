@@ -1,12 +1,14 @@
-﻿import React, { useRef, useMemo, useState } from 'react';
+import React, { useRef, useMemo, useState } from 'react';
 import { ArrowUpRight, ArrowDownRight, Activity, Database, DollarSign, Cpu, Upload, Loader2, Shield, ArrowLeft } from 'lucide-react';
 import { LogUploader } from './LogProcessor/LogUploader';
 import { Leaderboard } from './Leaderboard';
 import { PlayerProfile } from './PlayerProfile';
 import { NickVerification } from './NickVerification';
+import { ShoutBox } from './ShoutBox';
 import { MarketItem, Language } from '../types';
 import { translations } from '../services/i18n';
 import { IntelligenceService, GlobalStats } from '../services/intelligence';
+import { useAuth } from '../contexts/AuthContext';
 
 interface StatCardProps {
     title: string;
@@ -50,6 +52,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [showIdentity, setShowIdentity] = useState(false);
     const [globalStats, setGlobalStats] = useState<GlobalStats | null>(null);
+    const { user } = useAuth();
 
     // Fetch global stats on mount
     React.useEffect(() => {
@@ -263,6 +266,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     </div>
                 </div>
             </div>
+
+            {/* Gamification Section - Free Shouts */}
+            {user && (
+                <div className="mt-8">
+                    <ShoutBox userId={user.id} />
+                </div>
+            )}
 
             {/* Market Intelligence - Full Width */}
             <div className="mt-8">

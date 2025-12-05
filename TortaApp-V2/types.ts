@@ -1,4 +1,4 @@
-﻿
+
 // Data Models based on the implied Python structure
 export interface MarketItem {
     id: string;
@@ -52,3 +52,32 @@ export enum ViewState {
 }
 
 export type Language = 'en' | 'pt';
+
+// Gamification Types
+
+export interface Badge {
+    id: string;
+    slug: string;
+    name: string;
+    description: string;
+    icon_name: string;
+    color: string;
+    created_at: string;
+}
+
+export interface UserBadge {
+    id: string;
+    user_id: string;
+    badge_id: string;
+    earned_at: string;
+    is_displayed: boolean;
+    badge?: Badge; // Joined data
+}
+
+export interface ShoutBalance {
+    user_id: string;
+    weekly_shouts_remaining: number;
+    monthly_shouts_remaining: number;
+    last_weekly_reset: string;
+    last_monthly_reset: string;
+}

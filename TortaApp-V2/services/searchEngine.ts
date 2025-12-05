@@ -1,4 +1,4 @@
-﻿/**
+/**
  * searchEngine.ts
  * High-Performance Inverted Index Search Engine
  * 
@@ -13,10 +13,13 @@ export class SearchEngine {
   private items: MarketItem[];
   private isIndexed: boolean;
 
-  constructor() {
+  constructor(data?: MarketItem[]) {
     this.index = new Map();
     this.items = [];
     this.isIndexed = false;
+    if (data) {
+      this.load(data);
+    }
   }
 
   /**

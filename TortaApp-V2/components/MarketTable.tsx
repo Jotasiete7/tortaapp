@@ -191,8 +191,11 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data, referencePrices 
         if (searchTerm && useAdvancedSearch) {
             const { textQuery, structuredQuery } = parseSearchText(searchTerm);
 
-            // Phase 1: Text search (simple includes for now, can use SearchEngine later)
-            if (textQuery) {
+            // Phase 1: Text search using SearchEngine
+            if (textQuery && searchEngineRef.current) {
+                result = searchEngineRef.current.search(textQuery);
+            } else if (textQuery) {
+                // Fallback if search engine not ready
                 const lowerTerm = textQuery.toLowerCase();
                 result = result.filter(item =>
                     item.name.toLowerCase().includes(lowerTerm) ||
