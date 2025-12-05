@@ -2,15 +2,17 @@ import React, { useEffect, useState } from 'react';
 import {
     Trophy, TrendingUp, User, Activity, Calendar,
     ShoppingCart, Tag, Hash, Clock, ArrowLeft, Server,
-    Award, Shield, Star, Heart, Gift, Beaker, Megaphone
+    Award, Shield, Star, Heart, Gift, Beaker, Megaphone,
+    Scroll
 } from 'lucide-react';
 import { ServerIcon } from './ServerIcon';
 import { BadgeSelector } from './BadgeSelector';
 import { BadgeService } from '../services/badgeService';
-import { ShoutService } from '../services/shoutService'; // NEW Import
+import { ShoutService } from '../services/shoutService'; 
 import { UserBadge } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { emojiService } from '../services/emojiService';
+import { GamificationRules } from './GamificationRules';
 import {
     IntelligenceService,
     PlayerStatsAdvanced,
@@ -88,6 +90,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
     // Badge system state
     const [badges, setBadges] = useState<UserBadge[]>([]);
     const [showBadgeSelector, setShowBadgeSelector] = useState(false);
+    const [showGamificationRules, setShowGamificationRules] = useState(false);
     const { user } = useAuth();
 
     useEffect(() => {
@@ -276,9 +279,15 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
                             <div className="text-amber-400 font-medium text-sm tracking-wide uppercase flex items-center gap-2">
                                 {title}
                                 {user && stats.nick.toLowerCase() === nick.toLowerCase() && (
-                                    <button onClick={() => setShowBadgeSelector(true)} className="ml-4 text-[10px] bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-slate-300 transition-colors">
-                                        Edit Badges
-                                    </button>
+                                    <>
+                                        <button onClick={() => setShowBadgeSelector(true)} className="ml-4 text-[10px] bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-slate-300 transition-colors">
+                                            Edit Badges
+                                        </button>
+                                        <button onClick={() => setShowGamificationRules(true)} className="text-[10px] bg-slate-700/50 hover:bg-slate-700 px-2 py-0.5 rounded text-amber-500/80 hover:text-amber-400 transition-colors flex items-center gap-1 border border-transparent hover:border-slate-600">
+                                            <Scroll className="w-3 h-3" />
+                                            Rules & Badges
+                                        </button>
+                                    </>
                                 )}
                             </div>
                         </div>
@@ -492,6 +501,12 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
                     onUpdate={() => loadBadges(user.id)}
                 />
             )}
+            
+            <GamificationRules
+                isOpen={showGamificationRules}
+                onClose={() => setShowGamificationRules(false)}
+                userEarnedBadgeIds={badges.map(b => b.badge_id)}
+            />
         </div>
     );
 };
