@@ -26,6 +26,30 @@ const BadgeIconMap: Record<string, React.ElementType> = {
     Shield, Award, Star, Heart, TrendingUp, Gift, Beaker
 };
 
+// VIBRANT BADGE STYLES
+const BADGE_STYLES: Record<string, string> = {
+    // Admin / Prestígio (Gold)
+    red: "text-red-400 bg-red-500/10 border-red-500/50 shadow-[0_0_12px_rgba(248,113,113,0.2)]",
+    gold: "text-amber-300 bg-amber-500/10 border-amber-400/50 shadow-[0_0_12px_rgba(251,191,36,0.3)]",
+    amber: "text-amber-400 bg-amber-500/10 border-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.2)]",
+    yellow: "text-yellow-400 bg-yellow-500/10 border-yellow-500/50 shadow-[0_0_10px_rgba(250,204,21,0.2)]",
+
+    // Tech / Beta (Cyan/Blue)
+    cyan: "text-cyan-400 bg-cyan-500/10 border-cyan-500/50 shadow-[0_0_12px_rgba(34,211,238,0.3)]",
+    blue: "text-blue-400 bg-blue-500/10 border-blue-500/50 shadow-[0_0_10px_rgba(96,165,250,0.2)]",
+
+    // Supporter (Purple/Pink)
+    purple: "text-purple-400 bg-purple-500/10 border-purple-500/50 shadow-[0_0_12px_rgba(192,132,252,0.3)]",
+    pink: "text-pink-400 bg-pink-500/10 border-pink-500/50 shadow-[0_0_10px_rgba(244,114,182,0.2)]",
+
+    // Market / Economy (Green/Orange)
+    emerald: "text-emerald-400 bg-emerald-500/10 border-emerald-500/50 shadow-[0_0_10px_rgba(52,211,153,0.2)]",
+    orange: "text-orange-400 bg-orange-500/10 border-orange-500/50 shadow-[0_0_12px_rgba(251,146,60,0.3)]",
+
+    // Default
+    slate: "text-slate-400 bg-slate-500/10 border-slate-500/50",
+};
+
 export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) => {
     const [stats, setStats] = useState<PlayerStatsAdvanced | null>(null);
     const [logs, setLogs] = useState<PlayerLog[]>([]);
@@ -135,22 +159,42 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ nick, onBack }) =>
                                 {getTitle()}
                             </span>
 
-                            {/* Display Badges */}
+                            {/* Display Badges VIBRANTES + TOOLTIPS */}
                             {badges.length > 0 && (
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 ml-2">
                                     {badges.map((ub) => {
                                         const BadgeIcon = ub.badge?.icon_name
                                             ? BadgeIconMap[ub.badge.icon_name] || Star
                                             : Star;
-                                        const colorClass = ub.badge?.color || 'amber';
+
+                                        // Mapear cor do banco para estilo vibrante ou usar fallback
+                                        const colorKey = ub.badge?.color || 'amber';
+                                        const styleClass = BADGE_STYLES[colorKey] || BADGE_STYLES['slate'];
 
                                         return (
                                             <div
                                                 key={ub.id}
-                                                title={`${ub.badge?.name}: ${ub.badge?.description}`}
-                                                className={`p-1.5 rounded-full bg-${colorClass}-500/10 border border-${colorClass}-500/50`}
+                                                className="group relative" // Necessário para o Tooltip
                                             >
-                                                <BadgeIcon className={`w-4 h-4 text-${colorClass}-500`} />
+                                                {/* Badge Icon */}
+                                                <div className={`p-1.5 rounded-full border transition-all hover:scale-110 cursor-help ${styleClass}`}>
+                                                    <BadgeIcon className="w-4 h-4" />
+                                                </div>
+
+                                                {/* CUSTOM TOOLTIP */}
+                                                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 hidden group-hover:block transition-all z-50">
+                                                    <div className="bg-slate-900 text-white text-xs rounded-lg p-3 shadow-xl border border-slate-700 relative">
+                                                        {/* Seta do tooltip */}
+                                                        <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-900 border-b border-r border-slate-700 rotate-45"></div>
+
+                                                        <p className={`font-bold uppercase mb-1 ${styleClass.split(' ')[0]}`}>
+                                                            {ub.badge?.name}
+                                                        </p>
+                                                        <p className="text-slate-400 font-medium leading-relaxed">
+                                                            {ub.badge?.description}
+                                                        </p>
+                                                    </div>
+                                                </div>
                                             </div>
                                         );
                                     })}

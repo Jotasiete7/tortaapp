@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Key, Copy, CheckCircle, AlertCircle, RefreshCw, User } from 'lucide-react';
+import { Shield, Key, Copy, CheckCircle, AlertCircle, RefreshCw, User, Lock } from 'lucide-react';
 import { IdentityService, UserNick } from '../services/identity';
 
 interface NickVerificationProps {
@@ -41,6 +41,8 @@ export const NickVerification: React.FC<NickVerificationProps> = ({ onSelectProf
         // Could add a toast here
     };
 
+    const hasVerifiedNick = nicks.some(nick => nick.is_verified);
+
     return (
         <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 animate-fade-in">
             <div className="flex items-center gap-3 mb-6">
@@ -53,24 +55,36 @@ export const NickVerification: React.FC<NickVerificationProps> = ({ onSelectProf
                 </div>
             </div>
 
-            {/* Input Section */}
-            <div className="flex gap-2 mb-8">
-                <input
-                    type="text"
-                    value={inputNick}
-                    onChange={(e) => setInputNick(e.target.value)}
-                    placeholder="Enter your exact in-game nick..."
-                    className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-colors"
-                />
-                <button
-                    onClick={handleGenerateToken}
-                    disabled={generating || !inputNick.trim()}
-                    className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                    {generating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
-                    Generate Token
-                </button>
-            </div>
+            {/* Input Section - HIDDEN if already verified */}
+            {!hasVerifiedNick ? (
+                <div className="flex gap-2 mb-8">
+                    <input
+                        type="text"
+                        value={inputNick}
+                        onChange={(e) => setInputNick(e.target.value)}
+                        placeholder="Enter your exact in-game nick..."
+                        className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                    />
+                    <button
+                        onClick={handleGenerateToken}
+                        disabled={generating || !inputNick.trim()}
+                        className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                        {generating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
+                        Generate Token
+                    </button>
+                </div>
+            ) : (
+                <div className="mb-8 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-lg flex items-center gap-3">
+                    <div className="p-2 bg-emerald-500/20 rounded-full">
+                        <CheckCircle className="w-5 h-5 text-emerald-400" />
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-emerald-400">Identity Verified</h4>
+                        <p className="text-sm text-slate-400">You have successfully linked your character. Max identities reached for now.</p>
+                    </div>
+                </div>
+            )}
 
             {/* Nicks List */}
             <div className="space-y-4">
