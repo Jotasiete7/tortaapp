@@ -47,7 +47,7 @@ export class PriceUtils {
                 count++;
             }
         }
-        console.log(`Loaded ${count} Redheart prices.`);
+        if (import.meta.env.DEV) console.log(`Loaded ${count} Redheart prices.`);
     }
 
     public getRedheartPrice(itemName: string): number | null {
@@ -176,7 +176,7 @@ const STORAGE_KEY = 'torta_app_prices_v1';
 export const savePricesToStorage = (prices: Record<string, number>): void => {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(prices));
-        console.log('Prices saved to localStorage');
+        if (import.meta.env.DEV) console.log('Prices saved to localStorage');
     } catch (e) {
         console.error('Failed to save prices to storage', e);
     }

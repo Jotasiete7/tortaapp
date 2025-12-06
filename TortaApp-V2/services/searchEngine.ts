@@ -28,7 +28,7 @@ export class SearchEngine {
    * Typically completes in <100ms for 100k items.
    */
   load(data: MarketItem[]) {
-    console.time('SearchEngine Indexing');
+    if (import.meta.env.DEV) console.time('SearchEngine Indexing');
     this.items = data;
     this.index.clear();
     
@@ -54,8 +54,8 @@ export class SearchEngine {
     }
 
     this.isIndexed = true;
-    console.timeEnd('SearchEngine Indexing');
-    console.log(`✅ Indexed ${data.length} items. Unique tokens: ${this.index.size}`);
+    if (import.meta.env.DEV) console.timeEnd('SearchEngine Indexing');
+    if (import.meta.env.DEV) console.log(`✅ Indexed ${data.length} items. Unique tokens: ${this.index.size}`);
   }
 
   /**
@@ -89,7 +89,7 @@ export class SearchEngine {
    */
   search(query: string): MarketItem[] {
     if (!this.isIndexed) {
-      console.warn('SearchEngine not indexed yet. Returning empty results.');
+      if (import.meta.env.DEV) console.warn('SearchEngine not indexed yet. Returning empty results.');
       return [];
     }
     

@@ -24,7 +24,7 @@ export const AuthCallback: React.FC = () => {
 
                 // 3. Manual Parse Fallback
                 if (hash && hash.includes('access_token')) {
-                    console.log('Attempting manual parse...');
+                    if (import.meta.env.DEV) console.log('Attempting manual parse...');
                     const params = new URLSearchParams(hash.substring(1));
                     const accessToken = params.get('access_token');
                     const refreshToken = params.get('refresh_token');

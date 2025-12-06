@@ -127,7 +127,7 @@ export async function submitBulkNDJSON(
         }
     }
 
-    console.log(`Parsed ${logs.length} valid records from ${totalLines} lines (${parseErrors} parse errors)`);
+    if (import.meta.env.DEV) console.log(`Parsed ${logs.length} valid records from ${totalLines} lines (${parseErrors} parse errors)`);
 
     // Use existing batch upload function
     const result = await submitLogsBatch(logs, onProgress);

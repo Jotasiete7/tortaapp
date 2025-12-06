@@ -1,4 +1,4 @@
-﻿import React, { useRef, useMemo, useState } from 'react';
+import React, { useRef, useMemo, useState } from 'react';
 import { ArrowUpRight, ArrowDownRight, Activity, Database, DollarSign, Cpu, Upload, Loader2, Shield, ArrowLeft } from 'lucide-react';
 import { LogUploader } from './LogProcessor/LogUploader';
 import { Leaderboard } from './gamification/Leaderboard';
@@ -291,7 +291,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </h2>
                 <LogUploader
                     onProcessingComplete={(records) => {
-                        console.log("Processed RAW logs:", records);
+                        if (import.meta.env.DEV) console.log("Processed RAW logs:", records);
                     }}
                 />
             </div>
