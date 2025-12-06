@@ -19,6 +19,8 @@ export interface PlayerStatsAdvanced extends PlayerStats {
     first_seen: string;
     last_seen: string;
     rank_position: number;
+    xp: number;
+    level: number;
 }
 
 export interface PlayerLog {
@@ -88,7 +90,7 @@ export const IntelligenceService = {
 
     getPlayerStatsAdvanced: async (nick: string): Promise<PlayerStatsAdvanced | null> => {
         const { data, error } = await supabase
-            .rpc('get_player_stats_advanced', { target_nick: nick });
+            .rpc('get_player_stats_v3', { target_nick: nick });
 
         if (error) {
             console.error('Error fetching advanced player stats:', error);
