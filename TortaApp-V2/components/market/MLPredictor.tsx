@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { BrainCircuit, Loader2, TrendingUp, TrendingDown, Info, AlertTriangle, Search, Filter, Layers, Calculator } from 'lucide-react';
+import { BrainCircuit, Loader2, TrendingUp, TrendingDown, Info, AlertTriangle, Search, Filter, Layers, Calculator, HelpCircle } from 'lucide-react';
 import { PredictionResult, MarketItem, BulkAnalysis } from '../../types';
 import { analyzePriceSet, MarketStats } from '../../services/mlEngine';
 import { formatWurmPrice } from '../../services/priceUtils';
 import { extractNameAndQty } from '../../services/fileParser';
 import { PriceHistogram } from './PriceHistogram';
 import { ProfitCalculator } from './ProfitCalculator';
+import { MLHelpModal } from './MLHelpModal';
 
 interface MLPredictorProps {
     data: MarketItem[];
@@ -110,6 +111,7 @@ const BulkSelector: React.FC<{
 
 export const MLPredictor: React.FC<MLPredictorProps> = ({ data }) => {
     const [quality, setQuality] = useState(50);
+    const [showHelp, setShowHelp] = useState(false);
     const [material, setMaterial] = useState('Any');
     const [itemName, setItemName] = useState('');
 
