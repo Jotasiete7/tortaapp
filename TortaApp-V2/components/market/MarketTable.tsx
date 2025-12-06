@@ -1,11 +1,10 @@
-﻿
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, Zap, ArrowUpDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Coins, ShoppingBag, Tag, ThumbsUp, ThumbsDown, BookOpen, Layers } from 'lucide-react';
 import { MarketItem } from '../../types';
 import { evaluateTrade, formatWurmPrice, findClosestReference } from '../../services/priceUtils';
 import { SearchEngine } from '../../services/searchEngine';
 import { parseSearchText, getStructuredFilter } from '../../services/queryParser';
-import { useMarketSearch } from '../hooks/useMarketSearch';
 import { SearchHelp } from '../ui/SearchHelp';
 import { ActiveFilters, ActiveFilter } from '../ui/ActiveFilters';
 
@@ -307,7 +306,7 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data, referencePrices 
 
                     <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto flex-wrap">
                         <div className="relative flex-1 sm:flex-none sm:min-w-[280px]">
-                            {useAdvancedSearch && <Zap className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-amber-500 animate-pulse" title="Advanced Search Active" />}<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                            {useAdvancedSearch && <Zap className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-amber-500 animate-pulse" />}<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                             <input
                                 type="text"
                                 autoComplete="off" placeholder={useAdvancedSearch ? "Try: iron ore ql>90 price<50..." : "Search item, seller..."}

@@ -52,7 +52,7 @@ class EmojiService {
             }
 
             const emojiChar = match[0];
-            console.log('Parsing emoji:', emojiChar, 'Codes:', Array.from(emojiChar).map(c => c.charCodeAt(0).toString(16)));
+            console.log('Parsing emoji:', emojiChar, 'Codes:', Array.from(emojiChar as string).map((c: string) => c.charCodeAt(0).toString(16)));
             const openMoji = this.getEmoji(emojiChar);
             console.log('Lookup result:', openMoji ? openMoji.hexcode : 'NOT FOUND');
 
