@@ -26,7 +26,7 @@ export const ShoutService = {
      * Calls the RPC function 'use_free_shout'.
      * Default color: CYAN
      */
-    async useFreeShout(message: string, color: string = 'cyan'): Promise<{ success: boolean; error?: string; remaining_weekly?: number }> {
+    async useFreeShout(message: string, color: string = 'cyan'): Promise<{ success: boolean; error?: string; remaining_weekly?: number; remaining_monthly?: number }> {
         const { data, error } = await supabase
             .rpc('use_free_shout', {
                 message_text: message,

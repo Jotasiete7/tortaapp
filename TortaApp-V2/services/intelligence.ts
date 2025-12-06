@@ -1,4 +1,4 @@
-﻿import { supabase } from './supabase';
+import { supabase } from './supabase';
 
 export interface TraderProfile {
     nick: string;
@@ -40,6 +40,13 @@ export interface GlobalStats {
     avg_price: number;
     wts_count: number;
     wtb_count: number;
+}
+
+export interface DbUsageStats {
+    total_size_bytes: number;
+    trade_logs_count: number;
+    users_count: number;
+    limit_bytes: number;
 }
 
 export const IntelligenceService = {
@@ -129,5 +136,17 @@ export const IntelligenceService = {
         }
 
         return data || [];
+    },
+
+    /**
+     * Fetches database usage statistics.
+     */
+    getDbUsage: async (): Promise<DbUsageStats | null> => {
+        const { data, error } = await supabase.rpc('get_db_usage');
+        if (error) {
+            console.error('Error fetching DB usage:', error);
+            return null;
+        }
+        return data;
     }
 };

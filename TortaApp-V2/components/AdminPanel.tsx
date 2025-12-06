@@ -1,10 +1,11 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ProtectedAdmin } from './auth/ProtectedAdmin';
-import { Megaphone, Plus, Trash2, Clock, Database, Smile, Gauge, Search, AlertTriangle, Trash } from 'lucide-react';
+import { Megaphone, Plus, Trash2, Clock, Database, Smile, Gauge, Search, AlertTriangle, Trash, HardDrive } from 'lucide-react';
 import { EmojiPicker } from './EmojiPicker';
 import { BulkDataUploader } from '../services/logProcessing';
+import { IntelligenceService, DbUsageStats } from '../services/intelligence';
 
 // Interface estendida para mensagens
 interface TickerMessageExtended {
@@ -42,13 +43,15 @@ const AdminPanelContent: React.FC = () => {
         return saved ? parseFloat(saved) : 1;
     });
 
-    // NOVOS ESTADOS - ModeraÃ§Ã£o
+    // NOVOS ESTADOS - Moderação
     const [searchTerm, setSearchTerm] = useState('');
     const [filterType, setFilterType] = useState<'all' | 'admin' | 'shout'>('all');
     const [cleanupLoading, setCleanupLoading] = useState(false);
+    const [dbUsage, setDbUsage] = useState<DbUsageStats | null>(null);
 
     useEffect(() => {
         fetchMessages();
+        fetchDbUsage();
 
         // Realtime subscription
         const channel = supabase
@@ -80,6 +83,11 @@ const AdminPanelContent: React.FC = () => {
         if (!error && data) {
             setMessages(data);
         }
+    };
+
+    const fetchDbUsage = async () => {
+        const usage = await IntelligenceService.getDbUsage();
+        setDbUsage(usage);
     };
 
     const handleAddMessage = async (e: React.FormEvent) => {
@@ -129,7 +137,7 @@ const AdminPanelContent: React.FC = () => {
         }
     };
 
-    // NOVA FUNÃ‡ÃƒO - Cleanup de shouts expirados
+    // NOVA FUNÇÃO - Cleanup de shouts expirados
     const handleCleanupExpired = async () => {
         if (!confirm('Delete all expired shouts? This cannot be undone.')) return;
 
@@ -140,7 +148,7 @@ const AdminPanelContent: React.FC = () => {
             if (error) throw error;
 
             if (data && data.length > 0) {
-                alert(`âœ… ${data[0].message}`);
+                alert(`✅ ${data[0].message}`);
                 fetchMessages();
             }
         } catch (err: any) {
@@ -168,7 +176,7 @@ const AdminPanelContent: React.FC = () => {
         { value: 'purple', label: 'Purple', class: 'bg-purple-500' }
     ];
 
-    // FILTROS E ESTATÃSTICAS
+    // FILTROS E ESTATÍSTICAS
     const filteredMessages = messages.filter(msg => {
         // Filtro por tipo
         if (filterType === 'admin' && msg.created_by_nick) return false;
@@ -190,7 +198,7 @@ const AdminPanelContent: React.FC = () => {
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
+        <div className="max-w-4xl mx-auto space-y-8 animate-fade-in mb-24">
             {/* Header */}
             <div className="text-center space-y-2">
                 <div className="inline-flex p-4 bg-amber-500/10 rounded-full mb-2">
@@ -203,6 +211,71 @@ const AdminPanelContent: React.FC = () => {
                 <h2 className="text-3xl font-bold text-white">Admin Dashboard</h2>
                 <p className="text-slate-400">Manage application data and announcements</p>
             </div>
+
+            {/* Database Health Status - Monitor always visible */}
+            {dbUsage && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                    {/* Storage Card */}
+                    <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex items-center justify-between relative overflow-hidden group">
+                        <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                            <Database className="w-16 h-16 text-emerald-500" />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-slate-400 text-xs font-medium uppercase tracking-wider mb-1">Database Storage</p>
+                            <h3 className="text-2xl font-bold text-white">
+                                {(dbUsage.total_size_bytes / 1024 / 1024).toFixed(1)} <span className="text-sm font-normal text-slate-500">MB</span>
+                            </h3>
+                            <div className="flex items-center gap-2 mt-2 w-full pr-4">
+                                <div className="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                                    <div
+                                        className={`h-full rounded-full transition-all duration-1000 ${(dbUsage.total_size_bytes / dbUsage.limit_bytes) > 0.8 ? 'bg-rose-500' : 'bg-emerald-500'
+                                            }`}
+                                        style={{ width: `${Math.min(100, (dbUsage.total_size_bytes / dbUsage.limit_bytes) * 100)}%` }}
+                                    />
+                                </div>
+                                <span className={`text-xs font-bold ${(dbUsage.total_size_bytes / dbUsage.limit_bytes) > 0.8 ? 'text-rose-400' : 'text-emerald-400'
+                                    }`}>
+                                    {((dbUsage.total_size_bytes / dbUsage.limit_bytes) * 100).toFixed(1)}%
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Records Card */}
+                    <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex items-center justify-between relative overflow-hidden group">
+                        <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                            <Search className="w-16 h-16 text-amber-500" />
+                        </div>
+                        <div>
+                            <p className="text-slate-400 text-xs font-medium uppercase tracking-wider mb-1">Indexed Items</p>
+                            <h3 className="text-2xl font-bold text-white">
+                                {(dbUsage.trade_logs_count / 1000).toFixed(1)}k
+                            </h3>
+                            <p className="text-xs text-slate-500 mt-1">Trade records processed</p>
+                        </div>
+                        <div className="bg-slate-900/50 p-2 rounded-lg border border-slate-700">
+                            <Database className="w-5 h-5 text-amber-500" />
+                        </div>
+                    </div>
+
+                    {/* Users Card */}
+                    <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex items-center justify-between relative overflow-hidden group">
+                        <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                            <Smile className="w-16 h-16 text-cyan-500" />
+                        </div>
+                        <div>
+                            <p className="text-slate-400 text-xs font-medium uppercase tracking-wider mb-1">Community</p>
+                            <h3 className="text-2xl font-bold text-white">
+                                {dbUsage.users_count}
+                            </h3>
+                            <p className="text-xs text-slate-500 mt-1">Registered accounts</p>
+                        </div>
+                        <div className="bg-slate-900/50 p-2 rounded-lg border border-slate-700">
+                            <Smile className="w-5 h-5 text-cyan-500" />
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Tab Navigation */}
             <div className="flex justify-center gap-4 border-b border-slate-700 pb-1 mb-6">
@@ -396,14 +469,14 @@ const AdminPanelContent: React.FC = () => {
                         </form>
                     </div>
 
-                    {/* NOVA SEÃ‡ÃƒO - ModeraÃ§Ã£o de Mensagens */}
+                    {/* NOVA SEÇÃO - Moderação de Mensagens */}
                     <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-xl font-bold text-white">
                                 Message Moderation
                             </h3>
 
-                            {/* BotÃ£o Cleanup */}
+                            {/* Botão Cleanup */}
                             <button
                                 onClick={handleCleanupExpired}
                                 disabled={cleanupLoading || stats.expired === 0}
@@ -414,7 +487,7 @@ const AdminPanelContent: React.FC = () => {
                             </button>
                         </div>
 
-                        {/* EstatÃ­sticas */}
+                        {/* Estatísticas */}
                         <div className="grid grid-cols-4 gap-4 mb-6">
                             <div className="bg-slate-900/50 border border-slate-700 rounded-lg p-3">
                                 <div className="text-2xl font-bold text-white">{stats.total}</div>
@@ -538,4 +611,3 @@ const AdminPanelContent: React.FC = () => {
         </div>
     );
 };
-

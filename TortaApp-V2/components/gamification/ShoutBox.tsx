@@ -28,7 +28,7 @@ export const ShoutBox: React.FC<ShoutBoxProps> = ({ userId }) => {
 
     const handleShout = async () => {
         if (!message.trim()) return;
-        
+
         setSending(true);
         setError(null);
         setSuccess(null);
@@ -43,7 +43,8 @@ export const ShoutBox: React.FC<ShoutBoxProps> = ({ userId }) => {
                 setBalance({
                     ...balance,
                     weekly_shouts_remaining: result.remaining_weekly,
-                    monthly_shouts_remaining: (balance.monthly_shouts_remaining || 1) - 1
+                    // Use server value if available, else fallback to manual calc
+                    monthly_shouts_remaining: result.remaining_monthly ?? ((balance.monthly_shouts_remaining || 1) - 1)
                 });
             } else {
                 loadBalance();
@@ -137,7 +138,7 @@ export const ShoutBox: React.FC<ShoutBoxProps> = ({ userId }) => {
                         </>
                     )}
                 </button>
-                
+
                 {!canShout && (
                     <p className="text-center text-xs text-slate-500 mt-2">
                         Resets automatically next week.
