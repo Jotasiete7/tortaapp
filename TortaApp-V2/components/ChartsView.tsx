@@ -11,6 +11,9 @@ import { SupplyHeatmap } from './market/SupplyHeatmap';
 import { SellerInsights } from './market/SellerInsights';
 import { MarketHealthDashboard } from './market/MarketHealthDashboard';
 import { PriceForecastPanel } from './market/PriceForecastPanel';
+import { useChartsTranslation } from '../services/chartsTranslations';
+import { ChartsGuide } from './market/ChartsGuide';
+import { HelpCircle, Globe } from 'lucide-react';
 import { calculateVolatility } from '../services/volatilityCalculator';
 import { getTopSellers } from '../services/sellerAnalytics';
 
@@ -24,6 +27,9 @@ type ChartType = 'line' | 'candlestick' | 'heatmap';
 export const ChartsView: React.FC<ChartsViewProps> = ({ rawItems = [] }) => {
     const [selectedItem, setSelectedItem] = useState<string>('');
     const [chartType, setChartType] = useState<ChartType>('line');
+
+    const { t, language, toggleLanguage } = useChartsTranslation();
+    const [showGuide, setShowGuide] = useState(false);
 
     const distinctItems = useMemo(() => getDistinctItems(rawItems), [rawItems]);
 
@@ -101,12 +107,30 @@ export const ChartsView: React.FC<ChartsViewProps> = ({ rawItems = [] }) => {
                 <div className="flex-1">
                     <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                         <TrendingUp className="text-amber-500 w-6 h-6" />
-                        Market Trends
+                        {t('market_trends')}
                     </h2>
-                    <p className="text-slate-400 text-sm">Analyze price history and supply distribution per item.</p>
+                    <p className="text-slate-400 text-sm">{t('analyze_text')}</p>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+
+                    <div className="flex items-center gap-2 mr-2">
+                        <button
+                            onClick={toggleLanguage}
+                            className="p-2 bg-slate-800 text-slate-400 hover:text-white rounded-lg transition-colors border border-slate-700 flex items-center gap-2"
+                            title="Switch Language"
+                        >
+                            <Globe className="w-4 h-4" />
+                            <span className="text-xs font-bold">{language === 'en' ? 'EN' : 'PT'}</span>
+                        </button>
+                        <button
+                            onClick={() => setShowGuide(true)}
+                            className="p-2 bg-slate-800 text-slate-400 hover:text-amber-500 rounded-lg transition-colors border border-slate-700"
+                            title={t('user_guide')}
+                        >
+                            <HelpCircle className="w-4 h-4" />
+                        </button>
+                    </div>
                     <div className="w-full sm:w-80">
                         <SmartSearch
                             items={distinctItems}
@@ -147,7 +171,8 @@ export const ChartsView: React.FC<ChartsViewProps> = ({ rawItems = [] }) => {
       {/* Market Health Dashboard */}
       <MarketHealthDashboard rawData={rawItems} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <ChartsGuide isOpen={showGuide} onClose={() => setShowGuide(false)} lang={language} />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Main Chart Area */}
                 <div className="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-lg">
                     <div className="mb-6 flex justify-between items-end">
