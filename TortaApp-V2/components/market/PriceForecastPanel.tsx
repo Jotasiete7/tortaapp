@@ -4,6 +4,7 @@ import { MarketItem } from '../../types';
 import { predictPrice, generateForecastData, getTrendDisplay } from '../../services/predictiveAnalytics';
 import { formatWurmPrice } from '../../services/priceUtils';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, ComposedChart } from 'recharts';
+import { useChartsTranslation } from '../../services/chartsTranslations';
 
 interface PriceForecastProps {
     items: MarketItem[];
@@ -11,6 +12,8 @@ interface PriceForecastProps {
 }
 
 export const PriceForecastPanel: React.FC<PriceForecastProps> = ({ items, itemName }) => {
+    const { t } = useChartsTranslation();
+    
     const forecast = useMemo(() => {
         if (!itemName || items.length === 0) return null;
         return predictPrice(items, itemName, 7);
@@ -30,13 +33,13 @@ export const PriceForecastPanel: React.FC<PriceForecastProps> = ({ items, itemNa
                 </div>
                 <div className="flex items-center gap-2 text-slate-500 text-sm">
                     <AlertCircle className="w-4 h-4" />
-                    <p>Not enough data for prediction (minimum 5 data points required)</p>
+                    <p>{t('not_enough_data')}</p>
                 </div>
             </div>
         );
     }
 
-    const trendDisplay = getTrendDisplay(forecast.trend);
+    const trendDisplay = getTrendDisplay(forecast.trend, t);
     const isPositive = forecast.predictedChange >= 0;
 
     const CustomTooltip = ({ active, payload }: any) => {
@@ -139,9 +142,9 @@ export const PriceForecastPanel: React.FC<PriceForecastProps> = ({ items, itemNa
 
             {/* Forecast Chart */}
             <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700/50">
-                <p className="text-xs text-slate-400 mb-3">Price Projection (with 95% confidence interval)</p>
+                <p className="text-xs text-slate-400 mb-3">{t('price_projection')}</p>
                 <div className="h-48">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" aspect={2}>
                         <ComposedChart data={forecastData}>
                             <defs>
                                 <linearGradient id="confidenceGradient" x1="0" y1="0" x2="0" y2="1">
@@ -207,8 +210,7 @@ export const PriceForecastPanel: React.FC<PriceForecastProps> = ({ items, itemNa
             <div className="flex items-start gap-2 text-xs text-slate-500 bg-slate-900/30 rounded p-2">
                 <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
                 <p>
-                    Predictions are based on historical data using linear regression.
-                    Actual prices may vary due to market events, game updates, or external factors.
+                    {t('predictions_disclaimer')}
                 </p>
             </div>
         </div>

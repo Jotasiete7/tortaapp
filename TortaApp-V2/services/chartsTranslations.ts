@@ -82,7 +82,20 @@ export const chartsTranslations: Translations = {
     'cat_tools': { en: 'Tools', pt: 'Ferramentas' },
     'cat_ores': { en: 'Ores', pt: 'Minérios' },
     'cat_clay': { en: 'Clay', pt: 'Argila' },
-    'cat_other': { en: 'Other', pt: 'Outros' }
+    'cat_other': { en: 'Other', pt: 'Outros' },
+    // Forecast specific
+    'data_points': { en: 'data points', pt: 'pontos de dados' },
+    'weak_uptrend': { en: 'Weak Uptrend', pt: 'Tendência de Alta Fraca' },
+    'moderate_uptrend': { en: 'Moderate Uptrend', pt: 'Tendência de Alta Moderada' },
+    'strong_uptrend': { en: 'Strong Uptrend', pt: 'Tendência de Alta Forte' },
+    'weak_downtrend': { en: 'Weak Downtrend', pt: 'Tendência de Baixa Fraca' },
+    'moderate_downtrend': { en: 'Moderate Downtrend', pt: 'Tendência de Baixa Moderada' },
+    'strong_downtrend': { en: 'Strong Downtrend', pt: 'Tendência de Baixa Forte' },
+    'price_projection': { en: 'Price Projection (with 95% confidence interval)', pt: 'Projeção de Preço (com intervalo de confiança de 95%)' },
+    'predictions_disclaimer': { en: 'Predictions are based on historical data using linear regression. Actual prices may vary due to market events, game updates, or external factors.', pt: 'Previsões baseadas em dados históricos usando regressão linear. Preços reais podem variar devido a eventos de mercado, atualizações do jogo ou fatores externos.' },
+    'not_enough_data': { en: 'Not enough data for prediction (minimum 5 data points required)', pt: 'Dados insuficientes para previsão (mínimo de 5 pontos necessários)' },
+    'current_price': { en: 'Current Price', pt: 'Preço Atual' },
+    'predicted_price': { en: 'Predicted', pt: 'Previsto' }
 };
 
 export const useChartsTranslation = () => {

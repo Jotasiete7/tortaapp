@@ -245,21 +245,23 @@ export function generateForecastData(items: MarketItem[], itemName: string, fore
 /**
  * Get trend icon and color
  */
-export function getTrendDisplay(trend: PriceForecast['trend']): { icon: string; color: string; label: string } {
+export function getTrendDisplay(trend: PriceForecast['trend'], t?: (key: string) => string): { icon: string; color: string; label: string } {
+    const useT = t || ((key: string) => key);
+    
     switch (trend) {
         case 'strong_up':
-            return { icon: '📈', color: 'emerald', label: 'Strong Uptrend' };
+            return { icon: '📈', color: 'emerald', label: useT('strong_uptrend') };
         case 'moderate_up':
-            return { icon: '↗️', color: 'emerald', label: 'Moderate Uptrend' };
+            return { icon: '↗️', color: 'emerald', label: useT('moderate_uptrend') };
         case 'weak_up':
-            return { icon: '⤴️', color: 'green', label: 'Weak Uptrend' };
+            return { icon: '⤴️', color: 'green', label: useT('weak_uptrend') };
         case 'stable':
-            return { icon: '➡️', color: 'slate', label: 'Stable' };
+            return { icon: '➡️', color: 'slate', label: useT('stable') };
         case 'weak_down':
-            return { icon: '⤵️', color: 'orange', label: 'Weak Downtrend' };
+            return { icon: '⤵️', color: 'orange', label: useT('weak_downtrend') };
         case 'moderate_down':
-            return { icon: '↘️', color: 'red', label: 'Moderate Downtrend' };
+            return { icon: '↘️', color: 'red', label: useT('moderate_downtrend') };
         case 'strong_down':
-            return { icon: '📉', color: 'red', label: 'Strong Downtrend' };
+            return { icon: '📉', color: 'red', label: useT('strong_downtrend') };
     }
-}
+};
