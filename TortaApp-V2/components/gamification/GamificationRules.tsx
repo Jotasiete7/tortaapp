@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { BadgeService } from '../../services/badgeService';
 import { supabase } from '../../services/supabase';
 import { Badge } from '../../types';
-import { Shield, Award, Star, Heart, TrendingUp, Gift, Beaker, X, Scroll, Calculator, Clock, Check } from 'lucide-react';
+import { Shield, Award, Star, Heart, TrendingUp, Gift, Beaker, X, Scroll, Calculator, Clock, Check, Moon, Sunrise, Ghost, Sparkles } from 'lucide-react';
 import { emojiService } from '../../services/emojiService';
 import { toast } from 'sonner';
 
@@ -14,7 +14,7 @@ interface GamificationRulesProps {
 
 // Reuse Icon Map
 const IconMap: Record<string, React.ElementType> = {
-    Shield, Award, Star, Heart, TrendingUp, Gift, Beaker
+    Shield, Award, Star, Heart, TrendingUp, Gift, Beaker, Moon, Sunrise, Ghost, Sparkles
 };
 
 const BADGE_TO_EMOJI: Record<string, string> = {
@@ -25,7 +25,11 @@ const BADGE_TO_EMOJI: Record<string, string> = {
     'Gift': '🎁',
     'Beaker': '🧪',
     'TrendingUp': '📈',
-    'Trophy': '🏆'
+    'Trophy': '🏆',
+    'Moon': '🌙',
+    'Sunrise': '🌅',
+    'Ghost': '👻',
+    'Sparkles': '✨'
 };
 
 const LEVEL_TABLE = [
