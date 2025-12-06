@@ -1,4 +1,4 @@
-
+﻿
 import { MarketItem, ChartDataPoint } from '../types';
 
 export interface ItemHistoryPoint {
@@ -12,6 +12,20 @@ export interface ItemHistoryPoint {
 export interface PriceDistributionPoint {
     range: string;
     count: number;
+}
+export interface CandlestickDataPoint {
+    date: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+}
+
+export interface HeatmapDataPoint {
+    date: string;
+    count: number;
+    avgPrice: number;
 }
 
 /**
@@ -127,3 +141,67 @@ export const generateChartDataFromHistory = (items: MarketItem[]): ChartDataPoin
     });
     return chartData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 };
+/**
+ * Generate candlestick (OHLC) data for an item
+ */
+export const getCandlestickData = (items: MarketItem[], itemName: string): CandlestickDataPoint[] => {
+    const filtered = items.filter(i => i.name.toLowerCase() === itemName.toLowerCase() && i.price > 0);
+    
+    // Group by date and sort by timestamp within each day
+    const dailyData = new Map<string, MarketItem[]>();
+    filtered.forEach(item => {
+        const date = new Date(item.timestamp).toISOString().split('T')[0];
+        if (!dailyData.has(date)) {
+            dailyData.set(date, []);
+        }
+        dailyData.get(date)!.push(item);
+    });
+
+    const candlesticks: CandlestickDataPoint[] = [];
+    dailyData.forEach((dayItems, date) => {
+        // Sort by timestamp to get open/close
+        const sorted = dayItems.sort((a, b) => 
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        );
+
+        const open = sorted[0].price;
+        const close = sorted[sorted.length - 1].price;
+        const high = Math.max(...sorted.map(i => i.price));
+        const low = Math.min(...sorted.map(i => i.price));
+        const volume = sorted.length;
+
+        candlesticks.push({ date, open, high, low, close, volume });
+    });
+
+    return candlesticks.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+};
+
+/**
+ * Generate supply heatmap data (daily listing counts)
+ */
+export const getSupplyHeatmapData = (items: MarketItem[], itemName: string): HeatmapDataPoint[] => {
+    const filtered = items.filter(i => i.name.toLowerCase() === itemName.toLowerCase());
+    
+    const dailyCounts = new Map<string, { count: number; totalPrice: number }>();
+    filtered.forEach(item => {
+        const date = new Date(item.timestamp).toISOString().split('T')[0];
+        if (!dailyCounts.has(date)) {
+            dailyCounts.set(date, { count: 0, totalPrice: 0 });
+        }
+        const data = dailyCounts.get(date)!;
+        data.count++;
+        data.totalPrice += item.price;
+    });
+
+    const heatmapData: HeatmapDataPoint[] = [];
+    dailyCounts.forEach((data, date) => {
+        heatmapData.push({
+            date,
+            count: data.count,
+            avgPrice: data.totalPrice / data.count
+        });
+    });
+
+    return heatmapData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+};
+

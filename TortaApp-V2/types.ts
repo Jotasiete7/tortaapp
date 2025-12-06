@@ -99,3 +99,36 @@ export interface DailyClaimResult {
     earned_badge?: boolean;
 }
 
+// Charts Engine - Phase 1 Interfaces
+export interface VolatilityMetrics {
+    score: number; // 0-100
+    priceVariance: number;
+    supplyConsistency: number; // 0-100
+    demandStability: number; // 0-100
+    trend: 'rising' | 'falling' | 'stable';
+}
+
+export interface SellerInsights {
+    seller: string;
+    totalListings: number;
+    avgPrice: number;
+    marketShare: number; // percentage 0-100
+    priceStrategy: 'premium' | 'discount' | 'market';
+    activityScore: number; // 0-100
+}
+
+export interface CandlestickDataPoint {
+    date: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+}
+
+export interface HeatmapDataPoint {
+    date: string;
+    count: number;
+    avgPrice: number;
+}
+
