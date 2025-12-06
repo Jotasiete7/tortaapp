@@ -8,6 +8,7 @@ import { BulkDataUploader } from '../services/logProcessing';
 import { IntelligenceService, DbUsageStats } from '../services/intelligence';
 import { AdminUserManager } from './AdminUserManager';
 import { AdminSettings } from './AdminSettings';
+import { AdminAnomalyDetective } from './AdminAnomalyDetective';
 
 // Interface estendida para mensagens
 interface TickerMessageExtended {
@@ -32,7 +33,7 @@ export const AdminPanel: React.FC = () => {
 
 const AdminPanelContent: React.FC = () => {
     const { user } = useAuth();
-    const [activeTab, setActiveTab] = useState<'ticker' | 'upload' | 'users' | 'settings'>('ticker');
+    const [activeTab, setActiveTab] = useState<'ticker' | 'upload' | 'users' | 'settings' | 'detective'>('ticker');
     const [messages, setMessages] = useState<TickerMessageExtended[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [color, setColor] = useState<'green' | 'red' | 'yellow' | 'cyan' | 'purple'>('green');
@@ -329,6 +330,18 @@ const AdminPanelContent: React.FC = () => {
                         Settings
                     </div>
                 </button>
+                <button
+                    onClick={() => setActiveTab('detective')}
+                    className={`px-6 py-3 font-medium text-sm transition-all border-b-2 ${activeTab === 'detective'
+                        ? 'border-rose-500 text-rose-500'
+                        : 'border-transparent text-slate-400 hover:text-slate-200'
+                        }`}
+                >
+                    <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4" />
+                        Detective
+                    </div>
+                </button>
             </div>
 
             {activeTab === 'users' ? (
@@ -338,6 +351,10 @@ const AdminPanelContent: React.FC = () => {
             ) : activeTab === 'settings' ? (
                 <div className="animate-fade-in">
                     <AdminSettings />
+                </div>
+            ) : activeTab === 'detective' ? (
+                <div className="animate-fade-in">
+                    <AdminAnomalyDetective />
                 </div>
             ) : activeTab === 'upload' ? (
                 <div className="animate-fade-in">
